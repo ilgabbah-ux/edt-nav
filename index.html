@@ -106,6 +106,7 @@ h3{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.12e
 .me .ring{position:absolute;inset:3px;border-radius:50%;background:var(--yellow);border:3px solid #111;box-shadow:0 0 0 2px var(--yellow)}
 .me .cone{position:absolute;left:50%;top:-14px;width:0;height:0;margin-left:-8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:16px solid var(--yellow);transform-origin:8px 27px;display:none}
 .me.dir .cone{display:block}
+.me .melbl{position:absolute;left:32px;top:1px;font-family:var(--display);font-weight:800;font-size:14px;background:#111;color:var(--yellow);border:2px solid var(--yellow);border-radius:6px;padding:0 6px;white-space:nowrap;line-height:1.35}
 .pin{font-family:var(--display);font-weight:800;font-size:12px;background:#111;color:var(--yellow);border:2px solid var(--yellow);border-radius:6px;padding:1px 5px;white-space:nowrap}
 /* tema chiaro (sole) */
 body.light{--bg:#f3f1ea;--panel:#ffffff;--panel2:#e9e6dc;--line:#bdb8a8;--fg:#121110;--muted:#55524a;--yellow:#e0a800;color-scheme:light}
@@ -441,7 +442,9 @@ function orient(){
 }
 function coneUpdate(){
   if(!meMk)return;const el=meMk.getElement().querySelector('.me');
-  el.classList.toggle('dir',heading!=null);meMk.setRotation(heading||0);
+  el.classList.toggle('dir',heading!=null);
+  el.querySelector('.cone').style.transform=`rotate(${(heading||0)-map.getBearing()}deg)`;
+  const n=(typeof crew!=='undefined'&&crew.name)?crew.name:'Tu',lb=el.querySelector('.melbl');if(lb.textContent!==n)lb.textContent=n;
 }
 const camBearing=()=>S.orient==='heading'&&follow&&heading!=null?heading:0;
 function autoZoom(kmh){
@@ -469,8 +472,8 @@ function onPos(p){
   if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1)heading=c.heading;
   else if(me&&hav(me,pt)>8)heading=bearing(me,pt);
   me=pt;
-  if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="cone"></div><div class="ring"></div></div>';
-    meMk=new maplibregl.Marker({element:el,rotationAlignment:'map'}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5}
+  if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="cone"></div><div class="ring"></div><div class="melbl"></div></div>';
+    meMk=new maplibregl.Marker({element:el}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5;map.on('rotate',coneUpdate)}
   meMk.setLngLat(ll(pt));
   const kmh=c.speed!=null&&!isNaN(c.speed)?c.speed*3.6:(lastFix?hav(lastFix.pt,pt)/Math.max(1,(p.timestamp-lastFix.t)/1000)*3.6:0);
   st.speed=kmh<1?0:Math.round(kmh);
@@ -594,7 +597,7 @@ $('fName').value=crew.name;$('fNo').value=crew.no;$('fGroup').value=crew.group;$
 ['fName','fNo','fGroup','fGap'].forEach(id=>$(id).addEventListener('change',()=>{
   const oldG=crew.group;
   crew.name=$('fName').value.trim();crew.no=$('fNo').value.trim();crew.group=$('fGroup').value.trim()||'EDT';crew.gap=+$('fGap').value;
-  store.set('edt_crew',crew);
+  store.set('edt_crew',crew);coneUpdate();
   if(oldG!==crew.group){clearRiders();if(sharing)ping(true)}
 }));
 const ago=s=>s<60?'adesso':s<3600?Math.round(s/60)+' min fa':Math.round(s/3600)+' h fa';
