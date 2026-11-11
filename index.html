@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;700&display=swap">
 <style>
 /* Layout: mappa a tutto schermo, barra dati in alto, pulsanti grandi in basso (usabili con i guanti) */
@@ -24,8 +24,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);overflow:hidden;overscroll-behavior:none}
 #map{position:fixed;inset:0;background:#1d1c19}
-.leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.55)!important;color:#bbb!important}
-.leaflet-control-attribution a{color:#ddd!important}
+.maplibregl-ctrl-attrib{font-size:9px}
+.maplibregl-ctrl-bottom-right{bottom:calc(env(safe-area-inset-bottom,0px) + 160px)}
 
 /* barra dati */
 #hud{position:fixed;top:0;left:0;right:0;z-index:500;
@@ -117,8 +117,6 @@ body.contrast .stat,body.contrast #navbar,body.contrast .btn,body.contrast .fab{
 #hud,#bar,.fab{zoom:var(--ui,1)}
 .stats{grid-template-columns:repeat(var(--cards,4),1fr)}
 
-/* mappa notte: OSM scurita (nessuna chiave richiesta) */
-.leaflet-tile-pane .night img,.night.leaflet-layer img{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
 
 /* pannelli generici */
 .sheet{position:fixed;inset:auto 0 0 0;z-index:900;max-height:82%;overflow:auto;
@@ -164,7 +162,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 #sosBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 162px);width:auto;padding:0 12px;display:none;border-color:var(--red);color:#fff;background:var(--red);font-family:var(--display);font-weight:800;font-size:15px;line-height:1}
 #sosBtn.on{display:grid}
 #sosBtn.active{background:#fff;color:var(--red);animation:blink 1s infinite}
-.rider{display:flex;align-items:center;gap:4px;transform:translate(-15px,-15px)}
+.rider{display:flex;align-items:center;gap:4px}
 .rider .no{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#2fb8ff;color:#08131b;border:3px solid #111;
   font-family:var(--display);font-weight:800;font-size:14px;box-shadow:0 0 0 2px #2fb8ff}
 .rider .lbl{font-family:var(--display);font-weight:800;font-size:13px;background:rgba(0,0,0,.75);color:#fff;border-radius:5px;padding:1px 5px;white-space:nowrap}
@@ -272,8 +270,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 </section>
 <div id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
+<script src="mappa.js"></script>
 <script>
 (()=>{
 /* ---------- utilità ---------- */
@@ -290,44 +288,46 @@ let tT;function toast(t,ms=2200){const e=$('toast');e.textContent=t;e.classList.
 const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8ff','#2f5bff','#b06bff','#ffffff','#8a877e','#111111'];
 
 /* ---------- impostazioni ---------- */
-const S=Object.assign({base:'topo',hill:0,mtb:false,labels:true,orient:'north',autoZoom:true,resume:20,offRoute:60,
+const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:20,offRoute:60,
   theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
-/* ---------- mappa ---------- */
-const canRotate=!!(L.Map.prototype.setBearing);
-const map=L.map('map',{zoomControl:false,attributionControl:true,rotate:canRotate,bearing:0,touchRotate:false,rotateControl:false,shiftKeyRotate:false})
-  .setView(store.get('edt_view',[44.9,7.6]).slice(0,2),store.get('edt_view',[0,0,9])[2]||9);
-const BASES={
-  topo:{n:'Topografica',u:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',nz:17,a:'© OpenStreetMap, © OpenTopoMap'},
-  cyclosm:{n:'Sterrati CyclOSM',u:'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',nz:20,a:'© OpenStreetMap, CyclOSM'},
-  osm:{n:'Stradale OSM',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',nz:19,a:'© OpenStreetMap',sub:''},
-  sat:{n:'Satellite ESRI',u:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',nz:19,a:'© Esri',sub:''},
-  dark:{n:'Scura notte',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',nz:19,a:'© OpenStreetMap',cls:'night'}
-};
-const OVER={
-  hill:{u:'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',nz:16,a:'Rilievo © Esri'},
-  mtb:{u:'https://tile.waymarkedtrails.org/mtb/{z}/{x}/{y}.png',nz:18,a:'© Waymarked Trails'},
-  labels:{u:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',nz:19,a:''},
-  roads:{u:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',nz:19,a:''}
-};
-function tl(spec,extra){
-  // "scritte grandi": tile a 512 px presi un livello sotto = nomi e simboli il doppio
-  const o=Object.assign({maxZoom:20,maxNativeZoom:spec.nz,attribution:spec.a,crossOrigin:true,className:spec.cls||''},extra||{});
-  if(S.big)Object.assign(o,{tileSize:512,zoomOffset:-1,maxNativeZoom:spec.nz+1});
-  return L.tileLayer(spec.u,o);
-}
-let mapLayers=[];
-function buildLayers(){
-  mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];
-  const b=BASES[S.base]||BASES.topo;mapLayers.push(tl(b));
-  if(S.hill>0)mapLayers.push(tl(OVER.hill,{opacity:S.hill/100,zIndex:2}));
-  if(S.base==='sat'&&S.labels){mapLayers.push(tl(OVER.roads,{zIndex:3}));mapLayers.push(tl(OVER.labels,{zIndex:4}))}
-  if(S.mtb)mapLayers.push(tl(OVER.mtb,{opacity:.85,zIndex:5}));
-  mapLayers.forEach(l=>l.addTo(map));
-}
-buildLayers();
+/* ---------- mappa (MapLibre, vettoriale) ---------- */
+if(S.base==='dark')S.base='edtnight';
+if(!store.get('edt_set_v2',false)){if(S.base==='topo')S.base='edt';if(!S.hill)S.hill=30;store.set('edt_set_v2',true);saveS()}
+const ll=p=>[p[1],p[0]];                       // [lat,lon] -> [lon,lat]
+const v0=store.get('edt_view',[44.9,7.6,9]);
+const canRotate=true;
+const BASES=EDTMAP.BASES;
+const map=new maplibregl.Map({container:'map',style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
+  attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:150});
+map.touchZoomRotate.disableRotation();
+map.on('load',()=>document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
+map.keyboard.disableRotation();
+const EMPTY={type:'FeatureCollection',features:[]};
+let mapReady=false;
+// le nostre linee (tracce, giro registrato, waypoint) vanno ri-aggiunte ogni volta che cambia la mappa base
+map.on('style.load',()=>{
+  EDTMAP.addIcons(map);
+  map.addSource('gpx',{type:'geojson',data:EMPTY});
+  map.addSource('gpxpts',{type:'geojson',data:EMPTY});
+  map.addSource('rec',{type:'geojson',data:EMPTY});
+  map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
+  map.addLayer({id:'gpx-line',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','width'],'line-opacity':['get','op']}});
+  map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
+  map.addLayer({id:'rec-line',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':S.recColor,'line-width':S.recWidth}});
+  map.addLayer({id:'gpx-wpt',type:'circle',source:'gpxpts',filter:['==',['get','k'],'wpt'],paint:{'circle-radius':7,'circle-color':'#ffd21f','circle-stroke-color':'#111','circle-stroke-width':2}});
+  map.addLayer({id:'gpx-se',type:'circle',source:'gpxpts',filter:['!=',['get','k'],'wpt'],paint:{'circle-radius':8,'circle-color':['match',['get','k'],'start','#2f9e44','#e3261b'],'circle-stroke-color':'#fff','circle-stroke-width':3}});
+  map.addLayer({id:'gpx-lbl',type:'symbol',source:'gpxpts',layout:{'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':13,'text-offset':[0,1.2],'text-anchor':'top','text-allow-overlap':false},paint:{'text-color':'#111','text-halo-color':'#ffd21f','text-halo-width':2.5}});
+  mapReady=true;
+  if(typeof refreshGpx==='function'){refreshGpx();recalc()}
+});
+function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
+const buildLayers=setBase;
 map.on('moveend',()=>{const c=map.getCenter();store.set('edt_view',[c.lat,c.lng,map.getZoom()])});
+function boundsOf(points){const b=new maplibregl.LngLatBounds();points.forEach(p=>b.extend(ll(p)));return b}
+const PAD={top:170,bottom:120,left:30,right:30};
+function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:PAD,maxZoom:max||17,bearing:map.getBearing(),duration:600})}
 
 /* ---------- GPX ---------- */
 function parseGPX(txt,fallback){
@@ -359,21 +359,24 @@ let gpx=store.get('edt_gpx',[]); // {id,name,pts,wpts,color,vis}
 let active=store.get('edt_active',null);
 const drawn={};
 function cumul(t){if(t._c)return t._c;const c=[0];for(let i=1;i<t.pts.length;i++)c.push(c[i-1]+hav(t.pts[i-1],t.pts[i]));t._c=c;return c}
-function drawGpx(t){
-  if(drawn[t.id]){drawn[t.id].remove();delete drawn[t.id]}
-  if(!t.vis)return;
-  const g=L.layerGroup();
-  const ll=t.pts.map(p=>[p[0],p[1]]);
-  if(ll.length){
-    const w=t.width||5,op=(t.op||100)/100;
-    L.polyline(ll,{color:t.color==='#111111'?'#fff':'#000',weight:w+4,opacity:.5*op}).addTo(g);
-    L.polyline(ll,{color:t.color,weight:w,opacity:op}).addTo(g);
-    L.marker(ll[0],{icon:L.divIcon({className:'',html:'<div class="pin">PARTENZA</div>',iconSize:null,iconAnchor:[0,0]})}).addTo(g);
-    L.marker(ll[ll.length-1],{icon:L.divIcon({className:'',html:'<div class="pin">ARRIVO</div>',iconSize:null,iconAnchor:[0,0]})}).addTo(g);
-  }
-  t.wpts.forEach(w=>L.circleMarker([w.lat,w.lon],{radius:7,color:'#111',weight:2,fillColor:'#ffd21f',fillOpacity:1}).bindTooltip(esc(w.name||'Punto'),{permanent:!!w.name,direction:'top',offset:[0,-6]}).addTo(g));
-  g.addTo(map);drawn[t.id]=g;
+// tutte le tracce visibili in un'unica sorgente della mappa
+function refreshGpx(){
+  if(!mapReady)return;
+  const lines=[],pts=[];
+  gpx.filter(t=>t.vis).forEach(t=>{
+    if(t.pts.length>1){
+      lines.push({type:'Feature',properties:{color:t.color,casing:t.color==='#111111'?'#fff':'#000',width:t.width||5,op:(t.op||100)/100},geometry:{type:'LineString',coordinates:t.pts.map(ll)}});
+      pts.push({type:'Feature',properties:{k:'start',label:'PARTENZA'},geometry:{type:'Point',coordinates:ll(t.pts[0])}});
+      pts.push({type:'Feature',properties:{k:'end',label:'ARRIVO'},geometry:{type:'Point',coordinates:ll(t.pts[t.pts.length-1])}});
+    }
+    t.wpts.forEach(w=>pts.push({type:'Feature',properties:{k:'wpt',label:w.name||''},geometry:{type:'Point',coordinates:[w.lon,w.lat]}}));
+  });
+  // la traccia attiva sopra le altre
+  lines.sort((a,b)=>0);
+  map.getSource('gpx')?.setData({type:'FeatureCollection',features:lines});
+  map.getSource('gpxpts')?.setData({type:'FeatureCollection',features:pts});
 }
+let gpxQ=false;function drawGpx(){if(gpxQ)return;gpxQ=true;requestAnimationFrame(()=>{gpxQ=false;refreshGpx()})}
 function saveGpx(){store.set('edt_gpx',gpx.map(({_c,...t})=>t));store.set('edt_active',active)}
 async function loadFiles(files){
   let last=null;
@@ -387,16 +390,15 @@ async function loadFiles(files){
 }
 $('loadBtn').onclick=()=>$('fileIn').click();
 $('fileIn').onchange=e=>{loadFiles([...e.target.files]);e.target.value=''};
-function fitTo(t){const ll=t.pts.map(p=>[p[0],p[1]]).concat(t.wpts.map(w=>[w.lat,w.lon]));if(ll.length){setFollow(false);map.fitBounds(L.latLngBounds(ll),{paddingTopLeft:[30,140],paddingBottomRight:[30,110]})}}
+function fitTo(t){const pp=t.pts.map(p=>[p[0],p[1]]).concat(t.wpts.map(w=>[w.lat,w.lon]));if(pp.length){setFollow(false);fitPts(pp)}}
 
 /* ---------- registrazione ---------- */
 let rec=store.get('edt_rec_live',null); // {name,start,pts,paused,elapsed,resumedAt}
 let recs=store.get('edt_recs',[]);
-const recShadow=L.polyline([],{color:'#000',weight:S.recWidth+4,opacity:.5}).addTo(map);
-const recLine=L.polyline([],{color:S.recColor,weight:S.recWidth}).addTo(map);
-function styleRec(){recLine.setStyle({color:S.recColor,weight:S.recWidth});recShadow.setStyle({weight:S.recWidth+4})}
+function styleRec(){if(!mapReady)return;map.setPaintProperty('rec-line','line-color',S.recColor);map.setPaintProperty('rec-line','line-width',S.recWidth);map.setPaintProperty('rec-case','line-width',S.recWidth+4)}
+function setRecLine(ps){if(!mapReady)return;map.getSource('rec')?.setData(ps.length>1?{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:ps.map(ll)}}:EMPTY)}
 let recDist=0;
-function recalc(){const ps=rec?rec.pts.filter(Boolean):[];recDist=trackLen(ps);const ll=ps.map(p=>[p[0],p[1]]);recLine.setLatLngs(ll);recShadow.setLatLngs(ll)}
+function recalc(){const ps=rec?rec.pts.filter(Boolean):[];recDist=trackLen(ps);setRecLine(ps)}
 function elapsed(){if(!rec)return 0;return rec.elapsed+(rec.paused?0:(Date.now()-rec.resumedAt)/1000)}
 function recUI(){
   const b=$('recBtn');b.classList.toggle('rec',!!rec&&!rec.paused);b.classList.toggle('paused',!!rec&&rec.paused);
@@ -421,40 +423,36 @@ $('stopBtn').onclick=()=>{
 };
 
 /* ---------- GPS ---------- */
-let me=null,meMk=null,acc=null,follow=true,watchId=null,lastFix=null,heading=null;
+let me=null,meMk=null,follow=true,watchId=null,lastFix=null,heading=null;
 const st={speed:null,alt:null};          // valori per i riquadri dati
-let resumeT=null,progZoom=false,manualZoomAt=0;
+let resumeT=null,manualZoomAt=0;
 function setFollow(v){
   follow=v;$('followBtn').classList.toggle('on',v);clearTimeout(resumeT);
-  if(v&&me){progZoom=true;map.setView(me,Math.max(map.getZoom(),15));setTimeout(()=>progZoom=false,600);orient()}
-  if(!v&&canRotate&&S.orient==='north')map.setBearing(0);
+  if(v&&me)map.easeTo({center:ll(me),zoom:Math.max(map.getZoom(),15),bearing:camBearing(),duration:600});
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
-map.on('dragstart',()=>{setFollow(false);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
-map.on('zoomstart',()=>{if(!progZoom)manualZoomAt=Date.now()});
+map.on('dragstart',e=>{if(!e.originalEvent)return;setFollow(false);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
+map.on('zoomstart',e=>{if(e.originalEvent)manualZoomAt=Date.now()});
 // mappa che gira con la direzione di marcia
 function orient(){
   if(!canRotate)return;
-  if(S.orient==='heading'&&follow&&heading!=null)map.setBearing(-heading);
-  else if(S.orient==='north')map.setBearing(0);
-  coneUpdate();
+  if(!follow&&S.orient==='heading')return;
+  map.easeTo({bearing:camBearing(),duration:500});
 }
 function coneUpdate(){
-  const el=meMk&&meMk.getElement()?.querySelector('.me');if(!el)return;
-  el.classList.toggle('dir',heading!=null);
-  const b=canRotate?map.getBearing():0;
-  el.querySelector('.cone').style.transform=`rotate(${(heading||0)+b}deg)`;
+  if(!meMk)return;const el=meMk.getElement().querySelector('.me');
+  el.classList.toggle('dir',heading!=null);meMk.setRotation(heading||0);
 }
-if(canRotate)map.on('rotate',coneUpdate);
+const camBearing=()=>S.orient==='heading'&&follow&&heading!=null?heading:0;
 function autoZoom(kmh){
   if(!S.autoZoom||!follow||Date.now()-manualZoomAt<20000)return;
   const z=kmh<8?17:kmh<30?16:kmh<60?15:14;
-  if(map.getZoom()!==z){progZoom=true;map.setZoom(z);setTimeout(()=>progZoom=false,600)}
+  return z;
 }
 $('fitBtn').onclick=()=>{
   const ll=[];gpx.filter(t=>t.vis).forEach(t=>{t.pts.forEach(p=>ll.push([p[0],p[1]]));t.wpts.forEach(w=>ll.push([w.lat,w.lon]))});
   if(rec)rec.pts.forEach(p=>p&&ll.push([p[0],p[1]]));if(me)ll.push(me);
-  if(ll.length>1){setFollow(false);map.fitBounds(L.latLngBounds(ll),{paddingTopLeft:[30,140],paddingBottomRight:[30,110]})}else toast('Niente da mostrare: carica una traccia')
+  if(ll.length>1){setFollow(false);fitPts(ll)}else toast('Niente da mostrare: carica una traccia')
 };
 function startGPS(){
   if(watchId!=null)return;
@@ -471,8 +469,9 @@ function onPos(p){
   if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1)heading=c.heading;
   else if(me&&hav(me,pt)>8)heading=bearing(me,pt);
   me=pt;
-  if(!meMk){meMk=L.marker(pt,{icon:L.divIcon({className:'',html:'<div class="me"><div class="cone"></div><div class="ring"></div></div>',iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:1000}).addTo(map);acc=L.circle(pt,{radius:c.accuracy,color:'#ffd21f',weight:1,fillOpacity:.08,interactive:false}).addTo(map)}
-  meMk.setLatLng(pt);acc.setLatLng(pt).setRadius(c.accuracy);
+  if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="cone"></div><div class="ring"></div></div>';
+    meMk=new maplibregl.Marker({element:el,rotationAlignment:'map'}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5}
+  meMk.setLngLat(ll(pt));
   const kmh=c.speed!=null&&!isNaN(c.speed)?c.speed*3.6:(lastFix?hav(lastFix.pt,pt)/Math.max(1,(p.timestamp-lastFix.t)/1000)*3.6:0);
   st.speed=kmh<1?0:Math.round(kmh);
   if(c.altitude!=null)st.alt=Math.round(c.altitude);
@@ -482,11 +481,11 @@ function onPos(p){
     const prev=[...rec.pts].reverse().find(Boolean);
     if(!prev||hav(prev,pt)>=4){rec.pts.push([+pt[0].toFixed(7),+pt[1].toFixed(7),c.altitude!=null?Math.round(c.altitude*10)/10:null,p.timestamp]);
       if(prev)recDist+=hav(prev,pt);
-      const ll=rec.pts.filter(Boolean).map(q=>[q[0],q[1]]);recLine.setLatLngs(ll);recShadow.setLatLngs(ll);
+      setRecLine(rec.pts.filter(Boolean));
       if(rec.pts.length%5===0)store.set('edt_rec_live',rec);
     }
   }
-  if(follow){autoZoom(kmh);orient();map.panTo(pt,{animate:true})}
+  if(follow&&Date.now()-manualZoomAt>1500){const z=autoZoom(kmh);map.easeTo({center:ll(pt),bearing:camBearing(),zoom:z||map.getZoom(),duration:900})}
   updateNav();renderStats();
 }
 
@@ -532,7 +531,7 @@ function renderLists(){
       if(a==='edit'){openEdit(t,'gpx');return}
       if(a==='nav'){active=t.id;t.vis=true;fitTo(t);closeSheet()}
       if(a==='vis'){t.vis=!t.vis;if(!t.vis&&active===t.id)active=null}
-      if(a==='del'){if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent='Sicuro?';return}drawn[t.id]?.remove();delete drawn[t.id];gpx=gpx.filter(x=>x!==t);if(active===t.id)active=null}
+      if(a==='del'){if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent='Sicuro?';return}gpx=gpx.filter(x=>x!==t);if(active===t.id)active=null}
       saveGpx();gpx.forEach(drawGpx);renderLists();updateNav()};
     gl.appendChild(d);
   });
@@ -638,15 +637,15 @@ async function ping(force){
 }
 function riderIcon(d){
   const cls=d.sos?'sos':d.ago>180?'stale':'';
-  return L.divIcon({className:'',iconSize:null,html:`<div class="rider ${cls}"><div class="no">${esc(d.no||d.n.slice(0,2).toUpperCase())}</div><div class="lbl">${esc(d.n)}${d.ago>180?' · '+ago(d.ago):''}</div></div>`});
+  return `<div class="rider ${cls}"><div class="no">${esc(d.no||d.n.slice(0,2).toUpperCase())}</div><div class="lbl">${esc(d.n)}${d.ago>180?' · '+ago(d.ago):''}</div></div>`;
 }
 function updateRiders(list){
   const seen=new Set();
   list.forEach(d=>{
     if(d.lat==null)return;seen.add(d.id);
-    if(!riders[d.id])riders[d.id]={mk:L.marker([d.lat,d.lon],{zIndexOffset:900}).addTo(map)};
-    riders[d.id].d=d;riders[d.id].mk.setLatLng([d.lat,d.lon]).setIcon(riderIcon(d));
-    riders[d.id].mk.off('click').on('click',()=>toast(d.n+' · '+ago(d.ago)+(me?' · '+km(hav(me,[d.lat,d.lon])):'')));
+    if(!riders[d.id]){const el=document.createElement('div');const r={el,mk:new maplibregl.Marker({element:el,anchor:'left',offset:[-15,0]}).setLngLat([d.lon,d.lat]).addTo(map)};
+      el.addEventListener('click',()=>{const x=r.d;toast(x.n+' · '+ago(x.ago)+(me?' · '+km(hav(me,[x.lat,x.lon])):''))});riders[d.id]=r}
+    const r=riders[d.id];r.d=d;r.mk.setLngLat([d.lon,d.lat]);r.el.innerHTML=riderIcon(d);
   });
   for(const id in riders)if(!seen.has(id)){riders[id].mk.remove();delete riders[id]}
   checkAlerts();renderCrew();
@@ -683,7 +682,7 @@ function setAlerts(){
     const el=document.createElement('div');el.className='alert'+(a.sos?' sos':'');
     el.innerHTML=`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
     el.onclick=e=>{const b=e.target.closest('button');if(!b)return;
-      if(b.dataset.a==='go'&&riders[a.id]){const d=riders[a.id].d;setFollow(false);const ll=[[d.lat,d.lon]];if(me)ll.push(me);map.fitBounds(L.latLngBounds(ll),{paddingTopLeft:[40,200],paddingBottomRight:[40,140],maxZoom:16})}
+      if(b.dataset.a==='go'&&riders[a.id]){const d=riders[a.id].d;setFollow(false);const pp=[[d.lat,d.lon]];if(me)pp.push(me);fitPts(pp,16)}
       if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;setAlerts()}};
     box.appendChild(el);
   });
@@ -697,7 +696,7 @@ function renderCrew(){
     const el=document.createElement('div');el.className='item';
     const dist=me?km(hav(me,[d.lat,d.lon])):'–';
     el.innerHTML=`<div class="sw" style="background:${d.sos?'var(--red)':d.ago>180?'#8a877e':'#2fb8ff'}"></div><div style="min-width:0"><div class="name">${esc((d.no?d.no+' · ':'')+d.n)}</div><div class="meta">${dist} · ${ago(d.ago)}${d.sos?' · FERMO':''}</div></div><div class="acts"><button class="mini" data-a="go">Vedi</button></div>`;
-    el.onclick=()=>{setFollow(false);map.setView([d.lat,d.lon],16);closeSheet()};
+    el.onclick=()=>{setFollow(false);map.easeTo({center:[d.lon,d.lat],zoom:16});closeSheet()};
     cl.appendChild(el);
   });
 }
