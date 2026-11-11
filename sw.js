@@ -1,44 +1,45 @@
 // EDT Nav: app sempre disponibile offline + mappe già viste salvate sul telefono
-const APP = 'edt-nav-app-v4';
+const APP = 'edt-nav-app-v5';
 const TILES = 'edt-nav-tiles-v1';
-const MAX_TILES = 6000; // circa 100-150 MB al massimo
-const SHELL = ['./', './index.html', './manifest.json', './icon.svg',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
-  'https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js'];
+const MAX_TILES = 8000; // mappe vettoriali e rilievo: qualche centinaio di MB al massimo
+const SHELL = ['./', './index.html', './mappa.js', './manifest.json', './icon.svg',
+  'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.css'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', e => e.waitUntil(
+  caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('edt-nav-app') && k !== APP).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 
-const isTile = u => /opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|tile-cyclosm|waymarkedtrails/.test(u);
+// tasselli mappa: cache prima, poi rete (funzionano anche senza campo una volta visti)
+const isTile = u => /openfreemap\.org\/planet\/.+\.pbf|openfreemap\.org\/fonts|elevation-tiles-prod|opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|tile-cyclosm|waymarkedtrails/.test(u);
 
 async function trim() {
   const c = await caches.open(TILES);
   const keys = await c.keys();
   for (let i = 0; i < keys.length - MAX_TILES; i++) await c.delete(keys[i]);
 }
+let trimT = null;
 
 self.addEventListener('fetch', e => {
   const u = e.request.url;
   if (e.request.method !== 'GET') return;
   if (isTile(u)) {
-    // mappa: prima dal telefono, altrimenti scarica e salva
     e.respondWith(caches.open(TILES).then(async c => {
       const hit = await c.match(u);
       if (hit) return hit;
       try {
         const r = await fetch(e.request);
-        if (r.ok || r.type === 'opaque') { c.put(u, r.clone()); trim(); }
+        if (r.ok) { c.put(u, r.clone()); clearTimeout(trimT); trimT = setTimeout(trim, 5000); }
         return r;
       } catch (err) { return new Response('', { status: 504 }); }
     }));
     return;
   }
-  // app: rete se c'è (aggiornamenti), altrimenti copia salvata
+  // app e elenco tasselli (planet): rete se c'è, altrimenti copia salvata
   e.respondWith(fetch(e.request).then(r => {
-    if (r.ok && (u.startsWith(self.location.origin) || u.includes('cdnjs') || u.includes('jsdelivr') || u.includes('fonts.g'))) {
+    if (r.ok && (u.startsWith(self.location.origin) || u.includes('cdnjs') || u.includes('fonts.g') || u.endsWith('openfreemap.org/planet'))) {
       const cp = r.clone(); caches.open(APP).then(c => c.put(e.request, cp));
     }
     return r;
