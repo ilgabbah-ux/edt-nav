@@ -125,6 +125,8 @@ body.contrast .stat,body.contrast #navbar,body.contrast .btn,body.contrast .fab{
   padding:14px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(16px,env(safe-area-inset-left,0px));
   transform:translateY(105%);transition:transform .25s}
 .sheet.open{transform:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);padding:2px 0 10px;border-bottom:1px solid var(--line)}
+.legend span{display:flex;align-items:center;gap:5px}.legend i{width:22px;height:6px;border-radius:3px;box-shadow:0 0 0 1.5px #1e1408}
 .grid-maps{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .mapopt{min-height:60px;border-radius:12px;background:var(--panel2);border:2px solid var(--line);font-weight:700;font-size:14px;padding:6px;line-height:1.15}
 .mapopt.on{border-color:var(--yellow);color:var(--fg);box-shadow:inset 0 0 0 2px var(--yellow)}
@@ -238,6 +240,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <h3 style="margin-top:4px">Mappa base</h3>
   <div class="grid-maps" id="baseList"></div>
   <h3>Sopra la mappa</h3>
+  <div class="row"><div class="t">Difficoltà sterrate<small id="gradeInfo">—</small></div><button class="tog" id="sGrades" aria-label="Colori difficoltà sterrate"></button></div>
+  <div class="legend" aria-label="Legenda difficoltà"><span><i style="background:#1b7f2a"></i>1 compatta</span><span><i style="background:#43b649"></i>2 facile</span><span><i style="background:#f2c200"></i>3 sconnessa</span><span><i style="background:#f07c00"></i>4 dura</span><span><i style="background:#d7261e"></i>5 pessima</span><span><i style="background:#e3832b;opacity:.6"></i>senza dato</span></div>
   <div class="row"><div class="t">Rilievo del terreno<small>Ombreggiatura delle montagne</small></div><input type="range" id="sHill" min="0" max="80" step="10"></div>
   <div class="row"><div class="t">Sentieri MTB<small>Percorsi segnati sopra la mappa</small></div><button class="tog" id="sMtb" aria-label="Sentieri MTB"></button></div>
   <div class="row"><div class="t">Nomi e strade sul satellite</div><button class="tog" id="sLabels" aria-label="Nomi sul satellite"></button></div>
@@ -273,6 +277,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
 <script src="mappa.js"></script>
+<script src="difficolta.js"></script>
 <script>
 (()=>{
 /* ---------- utilità ---------- */
@@ -290,7 +295,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:20,offRoute:60,
-  theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
+  grades:true,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -313,6 +318,10 @@ map.on('style.load',()=>{
   map.addSource('gpx',{type:'geojson',data:EMPTY});
   map.addSource('gpxpts',{type:'geojson',data:EMPTY});
   map.addSource('rec',{type:'geojson',data:EMPTY});
+  // grado di difficoltà delle sterrate (sopra la mappa, sotto le tracce)
+  map.addSource('grade',{type:'geojson',data:EMPTY});
+  map.addLayer({id:'grade-case',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1e1408','line-width':['interpolate',['exponential',1.5],['zoom'],11,2.2,14,4.4,18,10]}});
+  map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
   map.addLayer({id:'gpx-line',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','width'],'line-opacity':['get','op']}});
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
@@ -321,11 +330,22 @@ map.on('style.load',()=>{
   map.addLayer({id:'gpx-se',type:'circle',source:'gpxpts',filter:['!=',['get','k'],'wpt'],paint:{'circle-radius':8,'circle-color':['match',['get','k'],'start','#2f9e44','#e3261b'],'circle-stroke-color':'#fff','circle-stroke-width':3}});
   map.addLayer({id:'gpx-lbl',type:'symbol',source:'gpxpts',layout:{'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':13,'text-offset':[0,1.2],'text-anchor':'top','text-allow-overlap':false},paint:{'text-color':'#111','text-halo-color':'#ffd21f','text-halo-width':2.5}});
   mapReady=true;
-  if(typeof refreshGpx==='function'){refreshGpx();recalc()}
+  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades()}
 });
 function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
 const buildLayers=setBase;
-map.on('moveend',()=>{const c=map.getCenter();store.set('edt_view',[c.lat,c.lng,map.getZoom()])});
+map.on('moveend',()=>{const c=map.getCenter();store.set('edt_view',[c.lat,c.lng,map.getZoom()]);refreshGrades()});
+// colori difficoltà: zona inquadrata
+let gradeKeys=[];
+function refreshGrades(){
+  if(!mapReady)return;
+  const src=map.getSource('grade');if(!src)return;
+  if(!S.grades||map.getZoom()<11){src.setData(EMPTY);gradeInfo();return}
+  gradeKeys=EDTGRADE.view(map.getBounds());src.setData(EDTGRADE.collect(gradeKeys));gradeInfo();
+}
+function gradeInfo(){const el=$('gradeInfo');if(!el)return;const st=EDTGRADE.status();
+  el.textContent=!S.grades?'Spenti':map.getZoom()<11?'Avvicina la mappa per vederli':st.loading?'Scarico la zona… ('+st.loading+')':st.failed?'Niente rete: riprovo da solo':'Zona salvata sul telefono'}
+let gT=null;EDTGRADE.onChange(()=>{clearTimeout(gT);gT=setTimeout(()=>{if(mapReady&&S.grades)map.getSource('grade')?.setData(EDTGRADE.collect(gradeKeys));gradeInfo()},300)});
 function boundsOf(points){const b=new maplibregl.LngLatBounds();points.forEach(p=>b.extend(ll(p)));return b}
 const PAD={top:170,bottom:120,left:30,right:30};
 function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:PAD,maxZoom:max||17,bearing:map.getBearing(),duration:600})}
@@ -387,7 +407,7 @@ async function loadFiles(files){
       gpx.push(t);last=t;
     }catch(e){toast(f.name+': '+e.message,3000)}
   }
-  if(last){if(last.pts.length)active=last.id;saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast('Traccia caricata: '+last.name);updateNav()}
+  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast('Traccia caricata: '+last.name);updateNav()}
 }
 $('loadBtn').onclick=()=>$('fileIn').click();
 $('fileIn').onchange=e=>{loadFiles([...e.target.files]);e.target.value=''};
@@ -759,7 +779,7 @@ function renderBases(){
 }
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
-tog('sMtb','mtb',buildLayers);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
+tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
 tog('sAutoZoom','autoZoom');tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
