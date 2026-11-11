@@ -1,5 +1,5 @@
 // EDT Nav: app sempre disponibile offline + mappe già viste salvate sul telefono
-const APP = 'edt-nav-app-v3';
+const APP = 'edt-nav-app-v4';
 const TILES = 'edt-nav-tiles-v1';
 const MAX_TILES = 6000; // circa 100-150 MB al massimo
 const SHELL = ['./', './index.html', './manifest.json', './icon.svg',
@@ -12,7 +12,7 @@ self.addEventListener('install', e => {
 });
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
-const isTile = u => /opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|tile-cyclosm|cartocdn\.com|waymarkedtrails/.test(u);
+const isTile = u => /opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|tile-cyclosm|waymarkedtrails/.test(u);
 
 async function trim() {
   const c = await caches.open(TILES);

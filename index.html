@@ -117,6 +117,9 @@ body.contrast .stat,body.contrast #navbar,body.contrast .btn,body.contrast .fab{
 #hud,#bar,.fab{zoom:var(--ui,1)}
 .stats{grid-template-columns:repeat(var(--cards,4),1fr)}
 
+/* mappa notte: OSM scurita (nessuna chiave richiesta) */
+.leaflet-tile-pane .night img,.night.leaflet-layer img{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
+
 /* pannelli generici */
 .sheet{position:fixed;inset:auto 0 0 0;z-index:900;max-height:82%;overflow:auto;
   background:var(--panel);border-top:2px solid var(--yellow);border-radius:18px 18px 0 0;
@@ -300,7 +303,7 @@ const BASES={
   cyclosm:{n:'Sterrati CyclOSM',u:'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',nz:20,a:'© OpenStreetMap, CyclOSM'},
   osm:{n:'Stradale OSM',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',nz:19,a:'© OpenStreetMap',sub:''},
   sat:{n:'Satellite ESRI',u:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',nz:19,a:'© Esri',sub:''},
-  dark:{n:'Scura notte',u:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',nz:20,a:'© OpenStreetMap, © CARTO'}
+  dark:{n:'Scura notte',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',nz:19,a:'© OpenStreetMap',cls:'night'}
 };
 const OVER={
   hill:{u:'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',nz:16,a:'Rilievo © Esri'},
@@ -310,7 +313,7 @@ const OVER={
 };
 function tl(spec,extra){
   // "scritte grandi": tile a 512 px presi un livello sotto = nomi e simboli il doppio
-  const o=Object.assign({maxZoom:20,maxNativeZoom:spec.nz,attribution:spec.a,crossOrigin:true},extra||{});
+  const o=Object.assign({maxZoom:20,maxNativeZoom:spec.nz,attribution:spec.a,crossOrigin:true,className:spec.cls||''},extra||{});
   if(S.big)Object.assign(o,{tileSize:512,zoomOffset:-1,maxNativeZoom:spec.nz+1});
   return L.tileLayer(spec.u,o);
 }
