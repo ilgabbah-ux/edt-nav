@@ -1,0 +1,15 @@
+{
+  "name": "EDT Nav – Enduro Drinking Team",
+  "short_name": "EDT Nav",
+  "description": "Navigazione off-road dell'Enduro Drinking Team: segui i GPX e registra i giri.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0c",
+  "theme_color": "#0d0d0c",
+  "lang": "it",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
