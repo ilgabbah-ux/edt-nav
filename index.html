@@ -1091,6 +1091,10 @@ function shareUI(){
   $('sosBtn').innerHTML=sos?'TUTTO<br>OK':'IMPRE-<br>VISTO';$('sosOk').hidden=!sos;
   $('shareToggle').classList.toggle('on',sharing);$('shareToggle').textContent=sharing?'Smetti di condividere':'Condividi la mia posizione';
 }
+// se manca la condivisione la attivo da solo; se manca il nome apro il Gruppo
+function ensureShare(){if(sharing&&crew.name)return true;
+  if(crew.name){setSharing(true);return sharing}
+  openSheet('gruppo');setTimeout(()=>{$('fName').scrollIntoView({block:'center'});$('fName').focus()},300);toast('Scrivi il tuo nome e premi Condividi: poi i messaggi partono',3500);return false}
 function setSharing(v){
   if(v&&!crew.name){toast('Scrivi il tuo nome prima di condividere');$('fName').focus();return}
   if(v&&!SERVER.startsWith('http')){toast('Servizio gruppo non ancora collegato');return}
@@ -1163,7 +1167,7 @@ async function downloadZone(t,auto){
   toast(auto?'Mappa del giro salvata anche per quando non c\'è campo ✓':'Zona del giro salvata sul telefono ✓ ('+list.length+' pezzi di mappa)',3200);
 }
 $('sosShare').onclick=()=>sharePos(SOSTXT[sosR]||'🆘 Imprevisto');
-$('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet();if(sosR==='AIUTO')setTimeout(openHelp,400)};
+$('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(!ensureShare())return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet();if(sosR==='AIUTO')setTimeout(openHelp,400)};
 $('sosOk').onclick=()=>{setSos(false);closeSheet()};
 function setSos(v){sos=v;store.set('edt_sos',v);shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}
 
@@ -1394,7 +1398,7 @@ function rdp(pts,tol){if(pts.length<3)return pts.slice();const k=Math.cos(rad(pt
     for(let i=a+1;i<b;i++){const d=Math.abs(dy*(pts[i][1]*k*M-ax)-dx*(pts[i][0]*M-ay))/L;if(d>md){md=d;mi=i}}if(md>tol){keep[mi]=1;st.push([a,mi],[mi,b])}}
   return pts.filter((p,i)=>keep[i])}
 async function shareTrack(t){
-  if(!sharing||!crew.name){toast('Prima attiva la condivisione nel Gruppo',2500);return}
+  if(!ensureShare())return;
   if(!navigator.onLine){toast('Serve la rete per mandarla',2500);return}
   let tol=2,sp=rdp(t.pts,tol);while(sp.length>4500){tol*=1.6;sp=rdp(t.pts,tol)}
   const pts=sp.map(q=>q[0].toFixed(5)+','+q[1].toFixed(5)+(q[2]!=null?','+Math.round(q[2]):'')).join(';');
@@ -1653,7 +1657,7 @@ map.on('mouseenter','gpx-wpt',()=>map.getCanvas().style.cursor='pointer');map.on
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
-  if(!sharing){toast('Prima attiva la condivisione nel Gruppo',2500);return}
+  if(!ensureShare())return;
   pendMsg=b.dataset.m;ping(true);closeSheet();toast('Mandato al gruppo: '+QM[pendMsg],2000)};
 /* ---------- punto di ritrovo ---------- */
 function setRally(rv){
@@ -1666,7 +1670,7 @@ function setRally(rv){
     if(rally.mine!==1&&rally.by!==crew.name){buzz([250,100,250]);toast('🏁 Nuovo punto di ritrovo'+(rally.by?' da '+rally.by:'')+(me?' · '+km(hav(me,[rally.lat,rally.lon])):''),3200)}}
 }
 function goRally(){if(!rally)return;setDest({name:'Ritrovo del gruppo',where:rally.by?'Messo da '+rally.by:'',pt:[rally.lat,rally.lon]});paintMode();showSheet('routeSheet')}
-$('rRally').onclick=()=>{if(!dest)return;if(!sharing){toast('Prima attiva la condivisione nel Gruppo',2500);return}
+$('rRally').onclick=()=>{if(!dest)return;if(!ensureShare())return;
   pendRv=dest.pt;setRally({lat:dest.pt[0],lon:dest.pt[1],by:crew.name,t:Date.now(),mine:1});ping(true);closeSheet();toast('🏁 Ritrovo mandato a tutto il gruppo',2500)};
 setInterval(()=>{ping(false);for(const id in riders){riders[id].d.ago+=5;if(riders[id].d.mAgo!=null)riders[id].d.mAgo+=5}},5000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ping(true)});
