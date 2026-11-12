@@ -86,3 +86,37 @@ function bye(p) {
     lock.releaseLock();
   }
 }
+
+/* ---------- backup dei giri registrati su Drive ----------
+   EXPORT_KEY (codice archivio) e TRACKS_ROOT (id cartella "tracks") sono definiti solo nel progetto Apps Script,
+   non qui nel repo pubblico. I giri finiscono in tracks/Giri EDT Nav/<nome pilota>/. */
+function doPost(e) {
+  var out;
+  try {
+    var b = JSON.parse((e.postData && e.postData.contents) || '{}');
+    if (b.key !== EXPORT_KEY) out = { ok: false, error: 'codice' };
+    else if (b.a === 'save') out = saveRide(b);
+    else if (b.a === 'blist') out = listRides(b);
+    else if (b.a === 'bget') { var f = DriveApp.getFileById(String(b.id)); out = { ok: true, name: f.getName(), text: f.getBlob().getDataAsString() }; }
+    else out = { ok: false, error: 'azione' };
+  } catch (err) {
+    out = { ok: false, error: String(err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+function sub(parent, name) { var it = parent.getFoldersByName(name); return it.hasNext() ? it.next() : parent.createFolder(name); }
+function ridesFolder(n) { return sub(sub(DriveApp.getFolderById(TRACKS_ROOT), 'Giri EDT Nav'), clean(n, 20) || 'Senza nome'); }
+function saveRide(b) {
+  var name = String(b.file || 'giro.gpx').replace(/[\/\\:*?"<>|]+/g, '_').slice(0, 80);
+  if (!/\.gpx$/i.test(name)) name += '.gpx';
+  var gpx = String(b.gpx || '');
+  if (gpx.length < 50 || gpx.length > 20000000 || gpx.indexOf('<gpx') < 0) return { ok: false, error: 'gpx' };
+  var dir = ridesFolder(b.n), ex = dir.getFilesByName(name);
+  if (ex.hasNext()) return { ok: true, id: ex.next().getId(), dup: true };
+  return { ok: true, id: dir.createFile(name, gpx, 'application/gpx+xml').getId() };
+}
+function listRides(b) {
+  var it = ridesFolder(b.n).getFiles(), out = [];
+  while (it.hasNext()) { var f = it.next(); if (/\.gpx$/i.test(f.getName())) out.push({ id: f.getId(), name: f.getName() }); }
+  return { ok: true, files: out };
+}
