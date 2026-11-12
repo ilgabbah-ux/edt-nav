@@ -181,7 +181,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 #routeCard .rs small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 #routeCard .rs strong{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
 #routeCard svg.elev{width:100%;height:46px;display:block;margin:6px 0}
-#routeCard .ra{display:grid;grid-template-columns:1.3fr 1fr auto;gap:6px}
+#routeCard .ra{display:grid;grid-template-columns:1.3fr 1fr 48px 48px;gap:6px}
 #routeCard .ra button{min-height:46px;border-radius:11px;background:var(--panel2);border:2px solid var(--line);font-weight:700;font-size:15px}
 #routeCard .ra .go{background:var(--yellow);border-color:var(--yellow);color:#111;font-family:var(--display);font-weight:800;font-size:17px;text-transform:uppercase}
 #routeCard .ra .on{border-color:var(--yellow);color:var(--yellow)}
@@ -334,7 +334,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="rt"><b id="rcName">Percorso</b><span class="chip" id="rcMode">Off</span></div>
   <div class="rs"><div><small>Totale</small><strong id="rcLen">–</strong></div><div><small>Tempo</small><strong id="rcTime">–</strong></div><div><small>Salita</small><strong id="rcUp">–</strong></div><div><small>Sterrato</small><strong id="rcDirt">–</strong></div></div>
   <svg class="elev" id="rcElev" viewBox="0 0 300 46" preserveAspectRatio="none" aria-label="Profilo altimetrico"></svg>
-  <div class="ra"><button class="go" id="rcGo">Vai</button><button id="rcEdit">✎ Modifica</button><button id="rcClose" aria-label="Chiudi scheda">✕</button></div>
+  <div class="ra"><button class="go" id="rcGo">Vai</button><button id="rcEdit">✎ Modifica</button><button id="rcDel" aria-label="Annulla il percorso">🗑</button><button id="rcClose" aria-label="Chiudi la scheda e torna alla mappa">✕</button></div>
   <p class="eh">Tocca la linea per aggiungere un punto di passaggio, trascina i punti bianchi per spostare il percorso, tocca un punto per toglierlo.</p>
 </div>
 <div id="toast"></div>
@@ -912,7 +912,7 @@ const MODE_NAME={fast:'Veloce asfalto',off:'Off facile',offm:'Off medio',offh:'O
 function durTxt(sec){const m=Math.max(1,Math.round(sec/60));return m<60?m+' min':Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')}
 function showRouteCard(){
   const t=gpx.find(x=>x.id==='route');if(!t){$('routeCard').classList.remove('on');return}
-  const st=t.stats||{len:trackLen(t.pts),time:0,asc:gain(t.pts),dirt:null};
+  const L0=trackLen(t.pts),st=t.stats||{len:L0,time:L0/1000/(t.mode==='fast'?50:20)*3600,asc:gain(t.pts),dirt:null};
   $('rcName').textContent=t.name;$('rcMode').textContent=MODE_NAME[t.mode]||'Percorso';$('rcMode').style.background=t.color;
   $('rcLen').textContent=km(st.len);$('rcTime').textContent=st.time?durTxt(st.time):'–';
   $('rcUp').textContent='+'+Math.round(st.asc)+' m';$('rcDirt').textContent=st.dirt!=null?st.dirt+'%':'–';
@@ -941,6 +941,7 @@ function rerouteEdit(){const t=gpx.find(x=>x.id==='route');if(!t)return;dest=t.d
 let routeFrom=null;
 $('rcGo').onclick=()=>{editing2=false;$('routeCard').classList.remove('edit');$('rcEdit').classList.remove('on');drawVias();$('routeCard').classList.remove('on');active='route';saveGpx();updateNav();startGPS();setFollow(true);toast('Buon giro! Tranquilli, è un giro easy',2200)};
 $('rcEdit').onclick=()=>{editing2=!editing2;$('routeCard').classList.toggle('edit',editing2);$('rcEdit').classList.toggle('on',editing2);drawVias();if(editing2)toast('Tocca la linea per aggiungere un passaggio',2200)};
+$('rcDel').onclick=()=>{editing2=false;drawVias();gpx=gpx.filter(x=>x.id!=='route');if(active==='route')active=null;saveGpx();drawGpx();renderLists();updateNav();if(destMk){destMk.remove();destMk=null}dest=null;$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on');toast('Percorso annullato',1500)};
 $('rcClose').onclick=()=>{editing2=false;drawVias();$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on')};
 // tocco sulla linea del percorso: apre la scheda, o in modifica aggiunge un passaggio nel punto giusto dell'ordine
 map.on('click','gpx-hit',e=>{
