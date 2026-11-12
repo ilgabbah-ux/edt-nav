@@ -192,6 +192,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 #routeCard{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:600;
   background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:10px 12px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.45)}
 #routeCard.on{display:block}
+body.rcon #musicBtn,body.rcon #findBtn,body.rcon #camBtn,body.rcon #layerBtn,body.rcon #shareBtn{display:none!important}
+body.rcon #sosBtn,body.rcon #stopBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 106px + var(--rcH,300px))}
 #routeCard .rt{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 #routeCard .rt b{font-family:var(--display);font-weight:800;font-size:19px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #routeCard .chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;color:#111;white-space:nowrap}
@@ -870,18 +872,21 @@ function predicted(now){
   const d=fixV*dt,h=rad(fixH),la=rad(fixPt[0]);
   return [fixPt[0]+d*Math.cos(h)/R*180/Math.PI,fixPt[1]+d*Math.sin(h)/(R*Math.cos(la))*180/Math.PI];
 }
+let lastFr=0;
 function frame(now){
-  raf=0;const p=predicted(now);if(!p||!meMk)return;
+  raf=0;const gap=now-lastFr;if(gap<(S.saver?95:31)&&lastFr){raf=requestAnimationFrame(frame);return}
+  const kf=k=>1-Math.pow(1-k,Math.min(6,(lastFr?gap:16.7)/16.7));lastFr=now;
+  const p=predicted(now);if(!p||!meMk)return;
   // piccola correzione morbida per non "teletrasportare" il pallino quando arriva il fix nuovo (max 0,25 s)
-  shownPt=shownPt&&hav(shownPt,p)<40?[shownPt[0]+(p[0]-shownPt[0])*.35,shownPt[1]+(p[1]-shownPt[1])*.35]:p;
+  shownPt=shownPt&&hav(shownPt,p)<40?[shownPt[0]+(p[0]-shownPt[0])*kf(.35),shownPt[1]+(p[1]-shownPt[1])*kf(.35)]:p;
   meMk.setLngLat(ll(shownPt));
   if(follow&&!touching&&Date.now()-userAt>3000&&Date.now()-manualZoomAt>1500&&!map.isZooming()){
     const want=camBearing();
-    smoothH=smoothH==null?want:smoothH+((((want-smoothH)%360)+540)%360-180)*.12;   // rotazione morbida
+    smoothH=smoothH==null?want:smoothH+((((want-smoothH)%360)+540)%360-180)*kf(.12);   // rotazione morbida
     const moving=lastKmh>4,tilt=S.tilt&&moving,h=map.getContainer().clientHeight;
     const z=map.getZoom(),zg=zoomGoal==null?z:zoomGoal;
-    map.jumpTo({center:ll(shownPt),bearing:S.orient==='heading'?smoothH:0,pitch:map.getPitch()+((tilt?55:0)-map.getPitch())*.08,
-      padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},zoom:Math.abs(zg-z)>.01?z+(zg-z)*.06:z});
+    map.jumpTo({center:ll(shownPt),bearing:S.orient==='heading'?smoothH:0,pitch:map.getPitch()+((tilt?55:0)-map.getPitch())*kf(.08),
+      padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},zoom:Math.abs(zg-z)>.01?z+(zg-z)*kf(.06):z});
   }
   if(fixV>=1.5||(shownPt&&hav(shownPt,fixPt)>.5)||(follow&&Math.abs(map.getPitch()-((S.tilt&&lastKmh>4)?55:0))>.5))raf=requestAnimationFrame(frame);
 }
@@ -1853,6 +1858,8 @@ let routeFrom=null;
 $('rcGo').onclick=()=>{editing2=false;$('routeCard').classList.remove('edit');$('rcEdit').classList.remove('on');drawVias();$('routeCard').classList.remove('on');active='route';saveGpx();updateNav();startGPS();setFollow(true);toast('Buon giro! Tranquilli, è un giro easy',2200)};
 $('rcEdit').onclick=()=>{editing2=!editing2;$('routeCard').classList.toggle('edit',editing2);$('rcEdit').classList.toggle('on',editing2);drawVias();if(editing2)toast('Tocca la linea per aggiungere un passaggio',2200)};
 $('rcDel').onclick=()=>{editing2=false;drawVias();gpx=gpx.filter(x=>x.id!=='route');if(active==='route')active=null;saveGpx();drawGpx();renderLists();updateNav();if(destMk){destMk.remove();destMk=null}dest=null;$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on');toast('Percorso annullato',1500)};
+// con la scheda del percorso aperta tengo libero e visibile il tasto IMPREVISTO sopra la scheda
+new MutationObserver(()=>{const c=$('routeCard'),on=c.classList.contains('on');document.body.classList.toggle('rcon',on);if(on)requestAnimationFrame(()=>document.body.style.setProperty('--rcH',c.offsetHeight+'px'))}).observe($('routeCard'),{attributes:true,attributeFilter:['class']});
 $('rcClose').onclick=()=>{editing2=false;drawVias();$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on')};
 // tocco sulla linea del percorso: apre la scheda, o in modifica aggiunge un passaggio nel punto giusto dell'ordine
 map.on('click','gpx-hit',e=>{if(map.queryRenderedFeatures(e.point,{layers:['gpx-wpt']}).length)return;
