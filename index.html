@@ -596,7 +596,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
 <script src="mappa.js?v=23"></script>
 <script src="difficolta.js?v=24"></script>
-<script src="percorso.js?v=24"></script>
+<script src="percorso.js?v=25"></script>
 <script src="musica.js?v=8"></script>
 <script>
 (async()=>{
@@ -1816,7 +1816,7 @@ async function calcRoute(silent){
     gpx.unshift(t);active='route';saveGpx();drawGpx();renderLists();updateNav();
     if(S.grades)EDTGRADE.along(r.pts);
     const mins=Math.max(1,Math.round(r.time/60)),dur=mins<60?mins+' min':Math.floor(mins/60)+' h '+String(mins%60).padStart(2,'0');
-    const info=`${km(r.len)} · circa ${dur} · +${Math.round(r.asc)} m${r.dirtPct!=null?' · '+r.dirtPct+'% sterrato':''}`;
+    const info=`${km(r.len)} · circa ${dur}${r.asc!=null?' · +'+Math.round(r.asc)+' m':''}${r.dirtPct!=null?' · '+r.dirtPct+'% sterrato':''}`;if(r.long&&S.routeMode!=='fast'&&!silent)setTimeout(()=>toast('Tragitto lungo: percorso moto con più sterrato possibile, ma senza il dettaglio dello sterrato',3500),900);
     if(silent==='edit'){showRouteCard();drawVias()}
     else if(silent)toast('Percorso ricalcolato · '+info,3000);
     else{$('rInfo').textContent=info;closeSheet();setFollow(false);cardSoon=true;showRouteCard();fitTo(t);cardSoon=false}
@@ -1833,7 +1833,7 @@ function showRouteCard(){
   const L0=trackLen(t.pts),st=t.stats||{len:L0,time:L0/1000/(t.mode==='fast'?50:20)*3600,asc:gain(t.pts),dirt:null};
   $('rcName').textContent=t.name;$('rcMode').textContent=MODE_NAME[t.mode]||'Percorso';$('rcMode').style.background=t.color;
   $('rcLen').textContent=km(st.len);$('rcTime').textContent=st.time?durTxt(st.time):'–';
-  $('rcUp').textContent='+'+Math.round(st.asc)+' m';$('rcDirt').textContent=st.dirt!=null?st.dirt+'%':'–';
+  $('rcUp').textContent=st.asc!=null?'+'+Math.round(st.asc)+' m':'–';$('rcDirt').textContent=st.dirt!=null?st.dirt+'%':'–';
   // profilo altimetrico
   const el=t.pts.filter(p=>p[2]!=null);let svg='';
   if(el.length>2){const c=cumul(t),tot=c.at(-1)||1;let mn=Infinity,mx=-Infinity;t.pts.forEach(p=>{if(p[2]!=null){mn=Math.min(mn,p[2]);mx=Math.max(mx,p[2])}});const span=Math.max(30,mx-mn);
