@@ -239,7 +239,20 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 <button class="fab left" id="shareBtn" aria-label="Gruppo e posizione condivisa">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg><b id="crewCount">0</b>
 </button>
-<button class="fab left" id="sosBtn">SONO<br>FERMO</button>
+<button class="fab left" id="sosBtn">IMPRE-<br>VISTO</button>
+<section class="sheet edit" id="sosSheet" aria-label="Segnala imprevisto">
+  <div class="sheet-h"><h2>Segnala <em>imprevisto</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <p class="hint" style="margin-top:0">Il gruppo vede il tuo pallino rosso con il motivo e riceve un avviso.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="sosOpts">
+    <button class="wide-btn" data-r="FERMO" style="margin:0;min-height:70px">✋ Sono fermo</button>
+    <button class="wide-btn" data-r="ASPETTATEMI" style="margin:0;min-height:70px">⏳ Aspettatemi</button>
+    <button class="wide-btn" data-r="CADUTA" style="margin:0;min-height:70px">💥 Caduta</button>
+    <button class="wide-btn" data-r="GUASTO" style="margin:0;min-height:70px">🔧 Guasto / foratura</button>
+    <button class="wide-btn" data-r="BENZINA" style="margin:0;min-height:70px">⛽ Benzina</button>
+    <button class="wide-btn" data-r="AIUTO" style="margin:0;min-height:70px;border-color:var(--red);color:#ff8a80">🆘 Serve aiuto</button>
+  </div>
+  <button class="wide-btn go" id="sosOk" style="background:var(--green);border-color:var(--green)">✅ Tutto ok, riparto</button>
+</section>
 
 <button class="fab" id="layerBtn" aria-label="Cambia mappa">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
@@ -267,7 +280,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <label>Nome<input id="fName" maxlength="20" placeholder="Ilgabbah" autocomplete="nickname"></label>
     <label>Numero<input id="fNo" maxlength="4" inputmode="numeric" placeholder="69"></label>
     <label>Codice gruppo<input id="fGroup" maxlength="30" placeholder="EDT"></label>
-    <label>Avvisa se indietro di<select id="fGap"><option value="500">500 m</option><option value="1000">1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select></label>
+    <label>Avvisa se indietro da 5 min di<select id="fGap"><option value="0">Mai</option><option value="2000">2 km</option><option value="5000">5 km</option><option value="10000">10 km</option><option value="20000">20 km</option></select></label>
   </div>
   <button class="share" id="shareToggle">Condividi la mia posizione</button>
   <p class="hint" id="shareHint">Solo chi usa lo stesso codice gruppo ti vede. Si spegne quando premi di nuovo.</p>
@@ -775,9 +788,10 @@ $('eSave').onclick=()=>{
 
 /* ---------- gruppo: amici in tempo reale ---------- */
 const SERVER='https://script.google.com/macros/s/AKfycbw1aFw-TNfK9Mvw0yMtMcV9vzcmpgvjvzPbPHqwVyySgCWcK8icwWUi1LO4ASF1Sg384Q/exec';
-const crew=Object.assign({id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),name:'',no:'',group:'EDT',gap:1000},store.get('edt_crew',{}));
+const crew=Object.assign({id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),name:'',no:'',group:'EDT',gap:5000},store.get('edt_crew',{}));
+if(!store.get('edt_crew_v2',false)){if(crew.gap>0&&crew.gap<5000)crew.gap=5000;store.set('edt_crew_v2',true)}
 store.set('edt_crew',crew);
-let sharing=store.get('edt_share',false),sos=store.get('edt_sos',false),pinging=false,lastPing=0,netFail=0;
+let sosR=store.get('edt_sos_r','FERMO');let sharing=store.get('edt_share',false),sos=store.get('edt_sos',false),pinging=false,lastPing=0,netFail=0;
 const riders={};      // id -> {d, mk}
 const behindSent={},silentSent={},sosSeen={};
 $('fName').value=crew.name;$('fNo').value=crew.no;$('fGroup').value=crew.group;$('fGap').value=String(crew.gap);
@@ -791,7 +805,7 @@ const ago=s=>s<60?'adesso':s<3600?Math.round(s/60)+' min fa':Math.round(s/3600)+
 function clearRiders(){for(const id in riders){riders[id].mk.remove();delete riders[id]}renderCrew()}
 function shareUI(){
   $('shareBtn').classList.toggle('on',sharing);$('sosBtn').classList.toggle('on',sharing);$('sosBtn').classList.toggle('active',sos);
-  $('sosBtn').innerHTML=sos?'TUTTO<br>OK':'SONO<br>FERMO';
+  $('sosBtn').innerHTML=sos?'TUTTO<br>OK':'IMPRE-<br>VISTO';$('sosOk').hidden=!sos;
   $('shareToggle').classList.toggle('on',sharing);$('shareToggle').textContent=sharing?'Smetti di condividere':'Condividi la mia posizione';
 }
 function setSharing(v){
@@ -805,17 +819,16 @@ function setSharing(v){
 $('shareToggle').onclick=()=>setSharing(!sharing);
 $('shareBtn').onclick=()=>{if(!sharing){openSheet();$('fName').scrollIntoView({block:'center'})}else openSheet()};
 let sosArmed=false;
-$('sosBtn').onclick=()=>{
-  if(!sos&&!sosArmed){sosArmed=true;$('sosBtn').innerHTML='TOCCA<br>ANCORA';setTimeout(()=>{sosArmed=false;shareUI()},3000);return}
-  sosArmed=false;sos=!sos;store.set('edt_sos',sos);shareUI();ping(true);
-  toast(sos?'Avviso mandato: il gruppo vede che sei fermo':'Avviso tolto: tutto ok');
-};
+$('sosBtn').onclick=()=>{if(sos){setSos(false);return}showSheet('sosSheet')};
+$('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet()};
+$('sosOk').onclick=()=>{setSos(false);closeSheet()};
+function setSos(v){sos=v;store.set('edt_sos',v);shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}
 
 async function ping(force){
   if(!sharing||pinging||!SERVER.startsWith('http'))return;
   if(!force&&Date.now()-lastPing<14000)return;
   pinging=true;lastPing=Date.now();
-  const q=new URLSearchParams({a:'ping',id:crew.id,g:crew.group,n:crew.name,no:crew.no,sos:sos?'1':'0'});
+  const q=new URLSearchParams({a:'ping',id:crew.id,g:crew.group,n:crew.name,no:crew.no,sos:sos?'1':'0',r:sos?sosR:''});
   if(me){q.set('lat',me[0].toFixed(6));q.set('lon',me[1].toFixed(6));if(heading!=null)q.set('h',Math.round(heading));q.set('s',st.speed||0)}
   try{
     const r=await fetch(SERVER+'?'+q,{redirect:'follow',cache:'no-store'});
@@ -848,20 +861,24 @@ function gapOf(d){
 }
 function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 let alertList=[];
+const behindSince={};
 function checkAlerts(){
   const out=[];
   for(const id in riders){
     const d=riders[id].d;
-    if(d.sos){out.push({sos:true,id,txt:`${d.n} è FERMO${me?' · '+km(hav(me,[d.lat,d.lon])):''}`});if(!sosSeen[id]){sosSeen[id]=1;buzz([400,150,400,150,400])}continue}
+    if(d.sos){out.push({sos:true,id,txt:`${d.n}: ${d.r||'FERMO'}${me?' · '+km(hav(me,[d.lat,d.lon])):''}`});if(!sosSeen[id]){sosSeen[id]=1;buzz([400,150,400,150,400])}continue}
     delete sosSeen[id];
     if(!me)continue;
-    if(d.ago>300){if(!silentSent[id]){silentSent[id]=1;buzz([200,100,200])}out.push({id,txt:`${d.n}: nessun segnale da ${ago(d.ago).replace(' fa','')}`});continue}
+    if(d.ago>900){if(!silentSent[id]){silentSent[id]=1;buzz([200,100,200])}out.push({id,txt:`${d.n}: nessun segnale da ${ago(d.ago).replace(' fa','')}`});continue}
     delete silentSent[id];
+    if(!crew.gap)continue;
     const g=gapOf(d);
     if(g.m>crew.gap){
+      behindSince[id]=behindSince[id]||Date.now();
+      if(Date.now()-behindSince[id]<300000)continue;       // deve restare indietro 5 minuti di fila
       if(!behindSent[id]){behindSent[id]=1;buzz([300,120,300])}
-      out.push({id,txt:`${d.n} è rimasto indietro · ${km(g.m)}${g.track?'':' in linea d\'aria'}`});
-    }else if(g.m<crew.gap*.6)delete behindSent[id];
+      out.push({id,txt:`${d.n} è indietro da 5 min · ${km(g.m)}${g.track?'':' in linea d\'aria'}`});
+    }else if(g.m<crew.gap*.6){delete behindSent[id];delete behindSince[id]}
   }
   alertList=out;setAlerts();
 }
