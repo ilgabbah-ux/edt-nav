@@ -1,5 +1,5 @@
 // EDT Nav: app sempre disponibile offline + mappe già viste salvate sul telefono
-const APP = 'edt-nav-app-v32';
+const APP = 'edt-nav-app-v33';
 const TILES = 'edt-nav-tiles-v1';
 const MAX_TILES = 8000; // mappe vettoriali e rilievo: qualche centinaio di MB al massimo
 const SHELL = ['./', './index.html', './mappa.js?v=23', './difficolta.js?v=23', './percorso.js?v=23', './musica.js?v=1', './profili/moto-off-facile.brf', './profili/moto-off-medio.brf', './profili/moto-off-hard.brf', './manifest.json', './icon-192.png', './icon-512.png',
@@ -40,7 +40,9 @@ self.addEventListener('fetch', e => {
     return;
   }
   // app e elenco tasselli (planet): rete se c'è, altrimenti copia salvata
-  e.respondWith(fetch(e.request).then(r => {
+  // i file dell'app li chiedo sempre freschi (salta la cache del browser di 10 minuti)
+  const same = u.startsWith(self.location.origin);
+  e.respondWith(fetch(same ? new Request(u, { cache: 'no-cache', credentials: 'same-origin' }) : e.request).then(r => {
     if (r.ok && (u.startsWith(self.location.origin) || u.includes('cdnjs') || u.includes('fonts.g') || u.endsWith('openfreemap.org/planet'))) {
       const cp = r.clone(); caches.open(APP).then(c => c.put(e.request, cp));
     }
