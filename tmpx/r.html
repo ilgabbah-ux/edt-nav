@@ -1,3 +1,0 @@
-<!doctype html><meta charset="utf-8"><title>relay</title><body>relay<script>
-fetch('a.mp3?'+Date.now()).then(r=>r.arrayBuffer()).then(b=>{(window.opener||parent).postMessage({edt:1,buf:b},'*',[b]);document.body.textContent='sent '+b.byteLength;setTimeout(()=>window.close(),1500)}).catch(e=>document.body.textContent='err '+e);
-</script>
