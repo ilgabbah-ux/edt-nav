@@ -1,12 +1,13 @@
 /* EDT Nav · "Naviga verso": ricerca del posto e calcolo del percorso.
    Motore: BRouter (brouter.de, dati OpenStreetMap, gratis e senza chiavi).
    - "Veloce asfalto": profilo car-fast di BRouter (solo strade asfaltate/carrozzabili, il più rapido)
-   - "Off facile": profilo nostro (profili/moto-off-facile.brf): preferisce sterrate facili,
-     evita quelle dure, niente sentieri pedonali e rispetta i divieti ai mezzi a motore.
+   - "Off facile / medio / hard": profili nostri in profili/*.brf, sempre più sterrato e più duro;
+     nessuno passa su sentieri pedonali o strade vietate ai mezzi a motore.
    Ricerca posti: Photon (komoot), sempre OpenStreetMap. */
 (function () {
   const BR = 'https://brouter.de/brouter';
-  let offId = null, offIdAt = 0;
+  const FILES = { off: 'moto-off-facile', offm: 'moto-off-medio', offh: 'moto-off-hard' };
+  const ids = {};
 
   async function timed(url, opt, ms) {
     const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms || 25000);
@@ -14,19 +15,21 @@
   }
 
   // il profilo "Off facile" va caricato su BRouter (resta valido qualche ora): lo ricarico quando serve
-  async function offProfile(force) {
-    if (offId && !force && Date.now() - offIdAt < 3 * 3600e3) return offId;
-    const txt = await (await fetch('profili/moto-off-facile.brf')).text();
+  async function offProfile(mode, force) {
+    const c = ids[mode];
+    if (c && !force && Date.now() - c.at < 3 * 3600e3) return c.id;
+    const txt = await (await fetch('profili/' + FILES[mode] + '.brf')).text();
     const r = await timed(BR + '/profile', { method: 'POST', body: txt }, 20000);
     const j = await r.json();
     if (j.error) throw new Error('profilo: ' + j.error);
-    offId = j.profileid; offIdAt = Date.now(); return offId;
+    ids[mode] = { id: j.profileid, at: Date.now() }; return j.profileid;
   }
 
   async function route(from, to, mode) {
     // from/to: [lat, lon]
     const lonlats = from[1].toFixed(6) + ',' + from[0].toFixed(6) + '|' + to[1].toFixed(6) + ',' + to[0].toFixed(6);
-    let profile = mode === 'off' ? await offProfile() : 'car-fast';
+    const isOff = !!FILES[mode];
+    let profile = isOff ? await offProfile(mode) : 'car-fast';
     const ask = async (p) => {
       const r = await timed(`${BR}?lonlats=${lonlats}&profile=${p}&alternativeidx=0&format=geojson`, null, 30000);
       const t = await r.text();
@@ -36,7 +39,7 @@
     let j;
     try { j = await ask(profile); }
     catch (e) {
-      if (mode === 'off' && /profile|custom/i.test(e.message)) { profile = await offProfile(true); j = await ask(profile); }
+      if (isOff && /profile|custom/i.test(e.message)) { profile = await offProfile(mode, true); j = await ask(profile); }
       else throw e;
     }
     const f = j.features && j.features[0];
@@ -55,7 +58,7 @@
     }
     // tempo: per l'off la stima di BRouter è da auto, la rifaccio a 20 km/h sullo sterrato e 45 su asfalto
     let time = +p['total-time'] || 0;
-    if (mode === 'off' && tot) time = (dirt / 1000 / 20 + (tot - dirt) / 1000 / 45) * 3600;
+    if (isOff && tot) time = (dirt / 1000 / ({ off: 20, offm: 16, offh: 11 }[mode]) + (tot - dirt) / 1000 / 45) * 3600;
     return {
       pts, len: +p['track-length'] || 0, time, asc: +p['filtered ascend'] || 0,
       dirtPct: tot ? Math.round(dirt / tot * 100) : null
@@ -74,5 +77,5 @@
     });
   }
 
-  window.EDTROUTE = { route, search, warm: () => offProfile().catch(() => {}) };
+  window.EDTROUTE = { route, search, warm: (m) => FILES[m] ? offProfile(m).catch(() => {}) : null };
 })();
