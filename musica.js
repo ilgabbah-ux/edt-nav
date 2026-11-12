@@ -19,7 +19,7 @@
     ['ansia-da-colonnina', 'Ansia da colonnina'], ['quanto-costa', 'Quanto costa?'],
     ['bollo-addio', 'Bollo addio! Pieno porco dio!'], ['lultimo-e-poi-andiamo', "L'ultimo e poi andiamo!"], 
     ['mirco-vs-miti', 'Mirco vs Miti'], ['purcello-vs-paletta', 'Purcello vs Paletta'], ['angelo', 'Angelo'],
-    ['costa-gay', 'Costa Gay'], ['mirco-e-gabbah-fest-edition', 'Mirco e Gabbah Fest Edition'],
+    ['costa-gay', 'Costa Gay'], 
     ['all-i-want-for-xmas-is-edt', 'All I Want for Xmas Is EDT'],
     ['prosecco-e-spritz', 'Prosecco e Spritz'], ['mami-lo-spritz', 'Mami lo Spritz!'],
     ['porco-dio', 'Porco Dio!']
