@@ -302,6 +302,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <button class="wide-btn" data-r="BENZINA" style="margin:0;min-height:70px">⛽ Benzina</button>
     <button class="wide-btn" data-r="AIUTO" style="margin:0;min-height:70px;border-color:var(--red);color:#ff8a80">🆘 Serve aiuto</button>
   </div>
+  <button class="wide-btn" id="sosShare">📍 Manda posizione e motivo su WhatsApp…</button>
   <button class="wide-btn go" id="sosOk" style="background:var(--green);border-color:var(--green)">✅ Tutto ok, riparto</button>
 </section>
 
@@ -325,6 +326,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     Carica GPX
   </button>
   <button class="wide-btn" id="routeOpen" style="margin-top:8px">🧭 Naviga verso…</button>
+  <button class="wide-btn" id="posShare" style="margin-top:8px">📍 Manda la mia posizione (WhatsApp…)</button>
   <input type="file" id="fileIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple hidden>
   <h3>Gruppo del giro</h3>
   <div class="form">
@@ -872,6 +874,20 @@ $('shareToggle').onclick=()=>setSharing(!sharing);
 $('shareBtn').onclick=()=>{if(!sharing){openSheet();$('fName').scrollIntoView({block:'center'})}else openSheet()};
 let sosArmed=false;
 $('sosBtn').onclick=()=>{if(sos){setSos(false);return}showSheet('sosSheet')};
+// condividi la posizione con WhatsApp o altre app (link Google Maps, si apre su qualsiasi telefono)
+const SOSTXT={FERMO:'✋ Sono fermo',ASPETTATEMI:'⏳ Aspettatemi',CADUTA:'💥 Caduta',GUASTO:'🔧 Guasto / foratura',BENZINA:'⛽ Senza benzina',AIUTO:'🆘 Serve aiuto'};
+function getPos(){return new Promise((ok,ko)=>{if(me)return ok(me);if(!navigator.geolocation)return ko();
+  navigator.geolocation.getCurrentPosition(p=>ok([p.coords.latitude,p.coords.longitude]),ko,{enableHighAccuracy:true,timeout:12000,maximumAge:30000})})}
+async function sharePos(motivo){
+  let p;try{p=await getPos()}catch(e){toast('Posizione GPS non disponibile');return}
+  const url='https://maps.google.com/?q='+p[0].toFixed(6)+','+p[1].toFixed(6);
+  const chi=crew.name?crew.name+(crew.no?' #'+crew.no:''):'';
+  const text=(motivo?motivo+' · ':'')+'📍 '+(chi?chi+' è qui:':'Sono qui:');
+  try{if(navigator.share){await navigator.share({title:'Posizione EDT',text,url});return}}catch(e){if(e&&e.name==='AbortError')return}
+  location.href='https://wa.me/?text='+encodeURIComponent(text+' '+url);
+}
+$('posShare').onclick=()=>sharePos('');
+$('sosShare').onclick=()=>sharePos(SOSTXT[sosR]||'🆘 Imprevisto');
 $('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet()};
 $('sosOk').onclick=()=>{setSos(false);closeSheet()};
 function setSos(v){sos=v;store.set('edt_sos',v);shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}

@@ -1,5 +1,5 @@
 // EDT Nav: app sempre disponibile offline + mappe già viste salvate sul telefono
-const APP = 'edt-nav-app-v34';
+const APP = 'edt-nav-app-v35';
 const TILES = 'edt-nav-tiles-v1';
 const MAX_TILES = 8000; // mappe vettoriali e rilievo: qualche centinaio di MB al massimo
 const SHELL = ['./', './index.html', './mappa.js?v=23', './difficolta.js?v=23', './percorso.js?v=23', './musica.js?v=1', './profili/moto-off-facile.brf', './profili/moto-off-medio.brf', './profili/moto-off-hard.brf', './manifest.json', './icon-192.png', './icon-512.png',
