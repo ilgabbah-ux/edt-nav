@@ -107,7 +107,7 @@ h3{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.12e
 .me .cone{position:absolute;inset:-6px;display:none;transition:transform .35s}
 .me .cone svg{width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,.55))}
 .me.dir .ring{display:none}
-.me .pulse{position:absolute;inset:-10px;border-radius:50%;border:3px solid var(--yellow);opacity:0;animation:mepulse 2.4s infinite}
+.me .pulse{position:absolute;inset:-10px;border-radius:50%;border:3px solid var(--yellow);opacity:0;animation:mepulse 2.4s 3}
 @keyframes mepulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.6);opacity:0}}
 #splash{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#2a1d06,#0d0d0c 70%);transition:opacity .5s,visibility .5s}
 #splash.out{opacity:0;visibility:hidden}
@@ -321,8 +321,8 @@ const ll=p=>[p[1],p[0]];                       // [lat,lon] -> [lon,lat]
 const v0=store.get('edt_view',[44.9,7.6,9]);
 const canRotate=true;
 const BASES=EDTMAP.BASES;
-const map=new maplibregl.Map({container:'map',pixelRatio:Math.min(window.devicePixelRatio||1,2),style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
-  attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:65,fadeDuration:150});
+const map=new maplibregl.Map({container:'map',pixelRatio:Math.min(window.devicePixelRatio||1,1.5),renderWorldCopies:false,style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
+  attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:65,fadeDuration:0});
 map.touchZoomRotate.disableRotation();
 map.on('load',()=>document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
 map.keyboard.disableRotation();

@@ -48,14 +48,14 @@
     L.push(
       { id: 'water', type: 'fill', source: 'ofm', 'source-layer': 'water', paint: { 'fill-color': P.water } },
       { id: 'river', type: 'line', source: 'ofm', 'source-layer': 'waterway', paint: { 'line-color': P.river, 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 10, ['match', ['get', 'class'], 'river', 1.2, .5], 14, ['match', ['get', 'class'], 'river', 2.5, 1], 18, ['match', ['get', 'class'], 'river', 6, 2.5]] } },
-      { id: 'building', type: 'fill', source: 'ofm', 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': P.building } },
-      { id: 'boundary', type: 'line', source: 'ofm', 'source-layer': 'boundary', filter: ['<=', ['get', 'admin_level'], 6], paint: { 'line-color': P.boundary, 'line-width': 1, 'line-dasharray': [3, 2], 'line-opacity': .6 } },
+      { id: 'building', type: 'fill', source: 'ofm', 'source-layer': 'building', minzoom: 15, paint: { 'fill-color': P.building } },
+      { id: 'boundary', type: 'line', source: 'ofm', 'source-layer': 'boundary', maxzoom: 13, filter: ['<=', ['get', 'admin_level'], 6], paint: { 'line-color': P.boundary, 'line-width': 1, 'line-dasharray': [3, 2], 'line-opacity': .6 } },
 
       // sentieri: tratteggio colorato per difficoltà MTB (0-1 verde, 2 giallo, 3 arancio, 4+ rosso), altrimenti marrone
       { id: 'path', type: 'line', source: 'ofm', 'source-layer': 'transportation', minzoom: 12, filter: ['all', cls('path'), ['!', ['match', ['get', 'subclass'], ['footway', 'steps', 'pedestrian'], true, false]]],
         paint: { 'line-color': ['match', ['to-string', ['get', 'mtb_scale']], ['0', '0+', '0-', '1', '1+', '1-'], '#2f9e44', ['2', '2+', '2-'], '#d4a400', ['3', '3+', '3-'], '#e8590c', ['4', '5', '6'], '#c92a2a', P.path],
           'line-width': w(.8, 1.6, 3.5), 'line-dasharray': [2.5, 1.5] } },
-      { id: 'foot', type: 'line', source: 'ofm', 'source-layer': 'transportation', minzoom: 14, filter: ['all', cls('path'), ['match', ['get', 'subclass'], ['footway', 'steps', 'pedestrian'], true, false]],
+      { id: 'foot', type: 'line', source: 'ofm', 'source-layer': 'transportation', minzoom: 15, filter: ['all', cls('path'), ['match', ['get', 'subclass'], ['footway', 'steps', 'pedestrian'], true, false]],
         paint: { 'line-color': P.foot, 'line-width': w(.5, 1, 2.5), 'line-dasharray': [1, 1.5] } },
 
       // sterrate: bordo scuro + arancio (cementate in ocra)
@@ -66,7 +66,7 @@
         paint: { 'line-color': ['match', ['get', 'surface'], 'paved', P.trackPaved, P.track], 'line-width': w(.8, 2, 5) } },
 
       // strade
-      { id: 'service', type: 'line', source: 'ofm', 'source-layer': 'transportation', minzoom: 13, filter: cls('service'), layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': P.service, 'line-width': w(.5, 1.5, 6) } },
+      { id: 'service', type: 'line', source: 'ofm', 'source-layer': 'transportation', minzoom: 14, filter: cls('service'), layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': P.service, 'line-width': w(.5, 1.5, 6) } },
       { id: 'minor-case', type: 'line', source: 'ofm', 'source-layer': 'transportation', filter: cls('minor', 'tertiary'), layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': P.minorCase, 'line-width': w(1.2, 4, 14) } },
       { id: 'minor', type: 'line', source: 'ofm', 'source-layer': 'transportation', filter: cls('minor', 'tertiary'), layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': P.minor, 'line-width': w(.8, 3, 12) } },
       { id: 'rail', type: 'line', source: 'ofm', 'source-layer': 'transportation', filter: cls('rail'), paint: { 'line-color': P.rail, 'line-width': w(.6, 1.2, 2.5), 'line-dasharray': [3, 2] } },
