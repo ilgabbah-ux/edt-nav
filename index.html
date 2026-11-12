@@ -478,7 +478,9 @@ function setFollow(v,dragging){
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
 map.on('dragend',()=>{if(!follow&&map.getPitch()>0)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:400})});
-map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false,true);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
+map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false,true);armResume()});
+// torna a seguirti solo dopo N secondi SENZA toccare la mappa (prima i timer si accumulavano e la mappa saltava indietro mentre la guardavi)
+function armResume(){clearTimeout(resumeT);if(!(S.resume>0&&me))return;resumeT=setTimeout(function chk(){if(follow)return;const idle=Date.now()-userAt;if(touching||idle<S.resume*1000){resumeT=setTimeout(chk,Math.max(1000,S.resume*1000-idle));return}setFollow(true)},S.resume*1000)}
 map.on('zoomstart',e=>{if(e.originalEvent){manualZoomAt=Date.now();userZoomed=true}});
 // mappa che gira con la direzione di marcia
 function orient(){
