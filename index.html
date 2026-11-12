@@ -170,7 +170,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 .wide-btn.go{background:var(--yellow);border-color:var(--yellow);color:#111;font-family:var(--display);font-weight:800;font-size:19px;text-transform:uppercase}
 
 /* musica */
-#musicBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 224px)}
+#musicBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 286px)}
+#findBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 224px)}
 #musicBtn.on{border-color:var(--yellow);color:var(--yellow)}
 #player{position:fixed;z-index:550;left:calc(max(12px,env(safe-area-inset-left,0px)) + 62px);right:calc(max(12px,env(safe-area-inset-right,0px)) + 62px);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);
   height:54px;display:none;align-items:center;gap:4px;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:0 4px 0 10px;zoom:var(--ui,1)}
@@ -255,6 +256,9 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 
 <button class="fab left" id="shareBtn" aria-label="Gruppo e posizione condivisa">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg><b id="crewCount">0</b>
+</button>
+<button class="fab" id="findBtn" aria-label="Cerca indirizzo o waypoint">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
 </button>
 <button class="fab" id="musicBtn" aria-label="Musica">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -381,7 +385,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 </section>
 <section class="sheet edit" id="routeSheet" aria-label="Naviga verso">
   <div class="sheet-h"><h2>Naviga <em>verso</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
-  <input id="rQ" type="search" placeholder="Cerca un waypoint o un posto: rifugio, bar, paese…" autocomplete="off" style="font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;min-height:52px;padding:0 12px;width:100%">
+  <input id="rQ" type="search" placeholder="Indirizzo, posto o waypoint…" autocomplete="off" style="font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;min-height:52px;padding:0 12px;width:100%">
   <div class="list" id="rRes" style="margin-top:8px"></div>
   <p class="hint">Oppure chiudi questo pannello e tieni premuto un punto sulla mappa.</p>
   <h3>Destinazione</h3>
@@ -979,6 +983,7 @@ function setDest(d){
   if(!destMk){const el=document.createElement('div');el.innerHTML='<svg width="34" height="44" viewBox="0 0 34 44"><path d="M17 43C17 43 3 26 3 16a14 14 0 0 1 28 0c0 10-14 27-14 27z" fill="#e3261b" stroke="#111" stroke-width="3"/><circle cx="17" cy="16" r="5" fill="#ffd21f"/></svg>';destMk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(ll(d.pt)).addTo(map)}
   destMk.setLngLat(ll(d.pt));$('rInfo').textContent='';
 }
+$('findBtn').onclick=()=>$('routeOpen').click();
 $('routeOpen').onclick=()=>{paintMode();showSheet('routeSheet');EDTROUTE.warm(S.routeMode);setTimeout(()=>$('rQ').focus(),250)};
 // ricerca: prima i waypoint delle tue tracce (anche offline), poi i posti di OpenStreetMap
 function allWpts(){const o=[];gpx.forEach(t=>t.wpts.forEach(w=>{if(w.name)o.push({name:w.name,where:'📍 Waypoint · '+t.name,pt:[w.lat,w.lon],wp:1})}));return o}
