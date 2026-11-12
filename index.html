@@ -346,6 +346,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <button class="wide-btn" data-r="BENZINA" style="margin:0;min-height:70px">⛽ Benzina</button>
     <button class="wide-btn" data-r="AIUTO" style="margin:0;min-height:70px;border-color:var(--red);color:#ff8a80">🆘 Serve aiuto</button>
   </div>
+  <button class="wide-btn" id="sosHelp" style="border-color:var(--red);color:#ff8a80">🆘 Soccorso 112 con le coordinate</button>
   <button class="wide-btn" id="sosShare">📍 Manda posizione e motivo su WhatsApp…</button>
   <button class="wide-btn go" id="sosOk" style="background:var(--green);border-color:var(--green)">✅ Tutto ok, riparto</button>
 </section>
@@ -409,6 +410,9 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Zoom automatico<small>Vicino da fermo, più largo quando vai forte</small></div><button class="tog" id="sAutoZoom" aria-label="Zoom automatico"></button></div>
   <div class="row"><div class="t">Torna a seguirti dopo<small>Quando sposti la mappa col dito</small></div><div class="seg" id="sResume"><button data-v="0">Mai</button><button data-v="10">10 s</button><button data-v="20">20 s</button><button data-v="40">40 s</button></div></div>
   <div class="row"><div class="t">Allarme fuori traccia</div><div class="seg" id="sOff"><button data-v="30">30 m</button><button data-v="60">60 m</button><button data-v="100">100 m</button><button data-v="200">200 m</button></div></div>
+  <h3>Sicurezza</h3>
+  <div class="row"><div class="t">Avviso caduta automatico<small>Dopo un colpo forte e un minuto fermo avvisa il gruppo, se non rispondi</small></div><button class="tog" id="sCrash" aria-label="Avviso caduta"></button></div>
+  <div class="row"><div class="t">Mappa notte automatica<small>Al tramonto passa a EDT notte, all'alba torna EDT giorno</small></div><button class="tog" id="sAutoNight" aria-label="Mappa notte automatica"></button></div>
   <h3>Benzina</h3>
   <div class="row"><div class="t">Autonomia con un pieno<small id="fuelInfo">Ti avvisa quando sei in riserva</small></div><div class="seg" id="sTank"><button data-v="0">Off</button><button data-v="100">100</button><button data-v="150">150</button><button data-v="200">200</button><button data-v="250">250</button><button data-v="300">300</button></div></div>
   <div class="row"><div class="t">Avvisa in riserva da</div><div class="seg" id="sReserve"><button data-v="20">20 km</button><button data-v="30">30 km</button><button data-v="50">50 km</button></div></div>
@@ -431,6 +435,20 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Spessore</div><input type="range" id="recW" min="2" max="14" step="1"></div>
 </section>
 
+<section class="sheet" id="helpSheet" aria-label="Soccorso 112">
+  <div class="sheet-h"><h2>🆘 Soccorso <em>112</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <p class="hint" style="margin-top:0">Leggi queste coordinate all'operatore del 112: le chiede sempre in montagna.</p>
+  <div id="helpCoords" style="font-family:var(--display);font-weight:800;font-size:30px;line-height:1.15;text-align:center;background:var(--bg);border:2px solid var(--yellow);border-radius:14px;padding:12px;user-select:all">–</div>
+  <p class="hint" id="helpMore" style="text-align:center"></p>
+  <a class="wide-btn go" id="helpCall" href="tel:112" style="display:grid;place-items:center;text-decoration:none;background:var(--red);border-color:var(--red);color:#fff;font-size:22px">📞 Chiama il 112</a>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn" id="helpCopy" style="margin:0">📋 Copia coordinate</button><button class="wide-btn" id="helpShare" style="margin:0">📍 Manda su WhatsApp</button></div>
+</section>
+<section class="sheet" id="crashSheet" aria-label="Caduta">
+  <div class="sheet-h"><h2>Sei <em>caduto?</em></h2></div>
+  <p style="margin:0;line-height:1.45">Ho sentito un colpo forte e sei fermo. Se non rispondi, tra <b id="crashSec" style="font-size:26px;color:var(--yellow)">60</b> secondi avviso il gruppo con la tua posizione.</p>
+  <button class="wide-btn go" id="crashOk" style="background:var(--green);border-color:var(--green);min-height:80px;font-size:22px">👍 Sto bene</button>
+  <button class="wide-btn" id="crashHelp" style="border-color:var(--red);color:#ff8a80;min-height:64px">💥 Avvisa subito il gruppo</button>
+</section>
 <section class="sheet" id="awakeSheet" aria-label="Schermo acceso">
   <div class="sheet-h"><h2>Schermo <em>sempre acceso?</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <p style="margin:0 0 8px;line-height:1.45">Durante il giro EDT Nav può tenere lo <b>schermo acceso</b> e impedire che il telefono si blocchi da solo.</p>
@@ -521,7 +539,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -672,7 +690,7 @@ $('recBtn').onclick=()=>{
   if(!rec){const d=new Date();rec={name:'Giro EDT '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),start:Date.now(),pts:[],paused:false,elapsed:0,resumedAt:Date.now()};toast('Registrazione avviata');setFollow(true);startGPS()}
   else if(rec.paused){rec.paused=false;rec.resumedAt=Date.now();rec.pts.push(null);toast('Si riparte',1200)}
   else{rec.elapsed=elapsed();rec.paused=true;toast('In pausa',1200)}
-  store.set('edt_rec_live',rec);recUI();if(!askAwake()){wake();lockTip()}
+  store.set('edt_rec_live',rec);recUI();motionStart();if(!askAwake()){wake();lockTip()}
 };
 let stopArmed=false;
 $('stopBtn').onclick=()=>{
@@ -970,7 +988,7 @@ function setSharing(v){
   if(v&&!crew.name){toast('Scrivi il tuo nome prima di condividere');$('fName').focus();return}
   if(v&&!SERVER.startsWith('http')){toast('Servizio gruppo non ancora collegato');return}
   sharing=v;store.set('edt_share',v);
-  if(v){startGPS();ping(true);netUI();if(!askAwake()){wake();lockTip()}toast('Il gruppo '+crew.group+' ora ti vede')}
+  if(v){startGPS();ping(true);netUI();motionStart();if(!askAwake()){wake();lockTip()}toast('Il gruppo '+crew.group+' ora ti vede')}
   else{sos=false;store.set('edt_sos',false);if(SERVER.startsWith('http'))fetch(SERVER+'?a=bye&id='+encodeURIComponent(crew.id)+'&g='+encodeURIComponent(crew.group)).catch(()=>{});clearRiders();setAlerts();toast('Posizione non più condivisa');netUI()}
   shareUI();
 }
@@ -1034,7 +1052,7 @@ async function downloadZone(t,auto){
   toast(auto?'Mappa del giro salvata anche per quando non c\'è campo ✓':'Zona del giro salvata sul telefono ✓ ('+list.length+' pezzi di mappa)',3200);
 }
 $('sosShare').onclick=()=>sharePos(SOSTXT[sosR]||'🆘 Imprevisto');
-$('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet()};
+$('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet();if(sosR==='AIUTO')setTimeout(openHelp,400)};
 $('sosOk').onclick=()=>{setSos(false);closeSheet()};
 function setSos(v){sos=v;store.set('edt_sos',v);shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}
 
@@ -1142,7 +1160,7 @@ function checkAlerts(){
 const dismissed={};
 function setAlerts(){
   const box=$('alerts');box.innerHTML='';
-  const fa=fuelAlert(),la=lockAlert(),ta=trkNew?{id:'_trk',trk:1,txt:`📥 ${trkNew.by||'Il gruppo'} ha mandato la traccia «${trkNew.name}»`}:null;(ta?[ta]:[]).concat(la?[la]:[],fa?[fa]:[],alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
+  const fa=fuelAlert(),la=lockAlert(),ta=trkNew?{id:'_trk',trk:1,txt:`📥 ${trkNew.by||'Il gruppo'} ha mandato la traccia «${trkNew.name}»`}:null;(ta?[ta]:[]).concat(la?[la]:[],fa?[fa]:[],sunTxt?[{id:'_sun',sun:1,txt:sunTxt}]:[],alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
     const el=document.createElement('div');el.className='alert'+(a.sos?' sos':'');
     el.innerHTML=a.trk?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="tgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Segui</button><button data-a="x">OK</button></div>`:a.lock?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="x">OK</button></div>`:a.fuel?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="fgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Distributore</button><button data-a="full">Pieno fatto</button><button data-a="x">OK</button></div>`:a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
       :`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px">${a.sos?'<button data-a="reach" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Raggiungi</button>':''}<button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
@@ -1323,6 +1341,55 @@ $('poiOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k
   const fake={id:'l'+Date.now(),k,lat:+me[0].toFixed(5),lon:+me[1].toFixed(5),by:crew.name,t:Date.now()};poiToTrack(fake);
   if(sharing){pendPoi.push(k+','+fake.lat+','+fake.lon);ping(true);toast(POI[k][0]+' '+POI[k][1]+' segnalato al gruppo',2200)}else toast(POI[k][0]+' '+POI[k][1]+' salvato nella traccia (attiva il Gruppo per avvisare gli altri)',3000);
   closeSheet()};
+/* ---------- soccorso 112 con le coordinate ---------- */
+function dms(v,pos,neg){const a=Math.abs(v),d=Math.floor(a),m=Math.floor((a-d)*60),s=((a-d)*60-m)*60;return `${d}°${String(m).padStart(2,'0')}'${s.toFixed(1).padStart(4,'0')}" ${v>=0?pos:neg}`}
+async function openHelp(){showSheet('helpSheet');let p=me;if(!p){$('helpCoords').textContent='Cerco il GPS…';try{p=await getPos()}catch(e){$('helpCoords').textContent='GPS non disponibile';return}}
+  $('helpCoords').innerHTML=`${p[0].toFixed(5)}, ${p[1].toFixed(5)}<div style="font-size:17px;margin-top:6px;opacity:.85">${dms(p[0],'N','S')} · ${dms(p[1],'E','O')}</div>`;
+  $('helpMore').textContent=(lastAcc!=null?'Precisione '+Math.round(lastAcc)+' m':'')+(st.alt!=null?' · Quota '+st.alt+' m':'')+' · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}
+$('sosHelp').onclick=()=>openHelp();
+$('helpCopy').onclick=()=>{const t=me?me[0].toFixed(5)+', '+me[1].toFixed(5):'';try{navigator.clipboard.writeText(t).then(()=>toast('Coordinate copiate',1500))}catch(e){toast(t,4000)}};
+$('helpShare').onclick=()=>sharePos('🆘 Serve aiuto');
+/* ---------- avviso caduta: colpo forte e poi fermo ---------- */
+let crashT=null,crashCount=0,impactAt=0,impactPos=null,motionOn=false;
+function motionStart(){if(motionOn||!S.crash||!('DeviceMotionEvent' in window))return;
+  const go=()=>{motionOn=true;window.addEventListener('devicemotion',e=>{const a=e.accelerationIncludingGravity||e.acceleration;if(!a||a.x==null)return;
+    const g=Math.hypot(a.x,a.y,a.z)/9.81;if(g>6&&(rec||sharing)&&lastKmh>8&&!crashT&&Date.now()-impactAt>20000){impactAt=Date.now();impactPos=me;setTimeout(crashMaybe,15000)}})};
+  if(typeof DeviceMotionEvent.requestPermission==='function'&&/iPhone|iPad|Macintosh/.test(navigator.userAgent)){DeviceMotionEvent.requestPermission().then(r=>{if(r==='granted')go()}).catch(()=>{})}else go()}
+if(S.crash&&(sharing||rec)&&!(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'))setTimeout(motionStart,1000);
+function crashMaybe(){if(!S.crash||crashT)return;if(impactPos&&me&&hav(impactPos,me)>40)return;   // dopo il colpo sei ripartito: era un salto o una buca
+  crashCount=60;$('crashSec').textContent=crashCount;showSheet('crashSheet');buzz([500,200,500,200,500]);say('Sei caduto? Tocca sto bene, altrimenti avviso il gruppo');
+  crashT=setInterval(()=>{crashCount--;$('crashSec').textContent=crashCount;if(crashCount%10===0)buzz([300,150,300]);if(crashCount<=0)crashSend()},1000)}
+function crashStop(){clearInterval(crashT);crashT=null;closeSheet()}
+function crashSend(){crashStop();sosR='CADUTA';store.set('edt_sos_r',sosR);if(!sharing&&crew.name)setSharing(true);setSos(true);toast('💥 Avviso caduta mandato al gruppo',3500)}
+$('crashOk').onclick=()=>{crashStop();toast('👍 Ok, buon giro',1500)};
+$('crashHelp').onclick=()=>crashSend();
+/* ---------- sole: tramonto, mappa notte, avviso buio ---------- */
+function sunTimes(lat,lon,date){const r=Math.PI/180,dayMs=864e5,J1970=2440588,J2000=2451545,toJ=d=>d.valueOf()/dayMs-.5+J1970,fromJ=j=>new Date((j+.5-J1970)*dayMs);
+  const lw=r*-lon,phi=r*lat,d=toJ(date)-J2000,n=Math.round(d-.0009-lw/(2*Math.PI)),ds=.0009+lw/(2*Math.PI)+n,M=r*(357.5291+.98560028*ds),
+    C=r*(1.9148*Math.sin(M)+.02*Math.sin(2*M)+.0003*Math.sin(3*M)),L=M+C+r*102.9372+Math.PI,dec=Math.asin(Math.sin(r*23.4397)*Math.sin(L)),
+    Jn=J2000+ds+.0053*Math.sin(M)-.0069*Math.sin(2*L),w=Math.acos((Math.sin(-.833*r)-Math.sin(phi)*Math.sin(dec))/(Math.cos(phi)*Math.cos(dec))),
+    Js=J2000+.0009+(w+lw)/(2*Math.PI)+n+.0053*Math.sin(M)-.0069*Math.sin(2*L);return {rise:fromJ(Jn-(Js-Jn)),set:fromJ(Js)}}
+const hm=d=>d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+let sunWarned=false,sunTxt=null;
+function sunTick(){const p=me||[map.getCenter().lat,map.getCenter().lng];const s=sunTimes(p[0],p[1],new Date()),now=Date.now();
+  if(S.autoNight&&(S.base==='edt'||S.base==='edtnight')){const want=now>s.set.getTime()||now<s.rise.getTime()?'edtnight':'edt';if(S.base!==want){S.base=want;saveS();setBase();toast(want==='edtnight'?'🌙 Mappa notte':'☀️ Mappa giorno',1800)}}
+  const t=gpx.find(x=>x.id===active&&x.vis);const toSet=(s.set-now)/60000;
+  if(t&&st.left>500&&toSet>0&&toSet<100){const v=Math.max(20,lastKmh>8?lastKmh:25),eta=st.left/1000/v*60;
+    if(eta>toSet-15){sunTxt=`🌇 Tramonto alle ${hm(s.set)} (tra ${Math.round(toSet)} min) · all'arrivo ${(st.left/1000).toFixed(0)} km, circa ${Math.round(eta)} min`;if(!sunWarned){sunWarned=true;buzz([200,100,200]);say('Attenzione, tramonto tra '+Math.round(toSet)+' minuti');setAlerts()}}else sunTxt=null}else sunTxt=null}
+setInterval(sunTick,60000);setTimeout(sunTick,5000);
+/* ---------- pioggia sul percorso (Open-Meteo) ---------- */
+let rainInfo=null,rainAt=0;
+async function rainCheck(){const t=zoneTrack();if(!t||!navigator.onLine||(rainInfo&&rainInfo.id===t.id&&Date.now()-rainAt<30*60000))return rainInfo;
+  const c=[0];for(let i=1;i<t.pts.length;i++)c.push(c[i-1]+hav(t.pts[i-1],t.pts[i]));const tot=c[c.length-1];
+  const here=me?nearest(t,me):null,from=here&&here.d<2000?here.along:0,v=25;const samp=[];
+  for(let d=from;d<=tot&&samp.length<10;d+=Math.max(5000,(tot-from)/9)){let i=c.findIndex(x=>x>=d);if(i<0)i=c.length-1;samp.push({p:t.pts[i],km:Math.round(d/1000),eta:Date.now()+(d-from)/1000/v*3600e3})}
+  try{const q=new URLSearchParams({latitude:samp.map(s=>s.p[0].toFixed(3)).join(','),longitude:samp.map(s=>s.p[1].toFixed(3)).join(','),hourly:'precipitation,precipitation_probability',forecast_days:'2',timezone:'GMT'});
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?'+q);let j=await r.json();if(!Array.isArray(j))j=[j];
+    let worst=null;samp.forEach((s,i)=>{const h=j[i]&&j[i].hourly;if(!h)return;const tt=h.time.map(x=>Date.parse(x+':00Z'));
+      let k=tt.findIndex(x=>x>s.eta-1800e3);if(k<0)return;const pr=h.precipitation_probability[k]||0,mm=h.precipitation[k]||0;
+      if(!worst||pr>worst.pr||(pr===worst.pr&&mm>worst.mm))worst={pr,mm,km:s.km,at:new Date(tt[k])}});
+    rainInfo={id:t.id,worst};rainAt=Date.now()}catch(e){rainInfo=null}
+  return rainInfo}
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -1363,13 +1430,15 @@ function renderReady(){
     sharing&&crew.name?['✅','Gruppo',crew.name+(crew.no?' #'+crew.no:'')+' · gruppo '+crew.group+(crew.role?' · '+(crew.role==='A'?'apripista':'scopa'):'')]:['⚠️','Gruppo',crew.name?'Condivisione spenta':'Manca il tuo nome',['Attiva',()=>{if(crew.name)setSharing(true);else{openSheet();$('fName').scrollIntoView({block:'center'});$('fName').focus()}renderReady()}]],
     batt?(batt.level>=.6||batt.charging?['✅','Batteria',Math.round(batt.level*100)+'%'+(batt.charging?' · in carica':'')]:['⚠️','Batteria',Math.round(batt.level*100)+'%: carica il telefono o porta un powerbank']):['ℹ️','Batteria','Controlla che sia carica (o porta un powerbank)'],
     S.keepAwake!==true?['⚠️','Schermo acceso',S.keepAwake===false?'Spento: se blocchi il telefono il gruppo non ti vede':'Non ancora scelto',['Attiva',()=>setAwake(true)]]:'wakeLock' in navigator?(lock?['✅','Schermo acceso','Resta acceso da solo: non bloccare il telefono']:['⚠️','Schermo acceso','Non bloccare il telefono: il gruppo non ti vedrebbe',['Tienilo acceso',()=>{wake().then(()=>setTimeout(renderReady,300))}]]):['ℹ️','Schermo acceso','Alza lo spegnimento automatico dello schermo nelle impostazioni del telefono e non bloccarlo durante il giro'],
+    (()=>{const p=me||[map.getCenter().lat,map.getCenter().lng],s=sunTimes(p[0],p[1],new Date());return ['🌇','Tramonto','Oggi alle '+hm(s.set)+(Date.now()<s.set?' · tra '+Math.round((s.set-Date.now())/60000)+' min':'')]})(),
+    !rainInfo?['☁️','Pioggia sul giro',zoneTrack()?(navigator.onLine?'Controllo il meteo…':'Serve la rete'):'Carica la traccia']:!rainInfo.worst||rainInfo.worst.pr<30?['✅','Pioggia sul giro','Niente pioggia prevista lungo la traccia']:['⚠️','Pioggia sul giro',`${rainInfo.worst.pr}% di pioggia verso il km ${rainInfo.worst.km}, alle ${hm(rainInfo.worst.at)}${rainInfo.worst.mm?' ('+rainInfo.worst.mm+' mm)':''}`],
     S.saver?['✅','Risparmio batteria','Attivo']:['ℹ️','Risparmio batteria','Spento: consigliato per i giri lunghi',['Attiva',()=>{S.saver=true;saveS();$('sSaver').classList.add('on');applySaver()}]],
   ];
   rows.forEach(([ic,tt,sub,fix])=>{const el=document.createElement('div');el.className='item';
     el.innerHTML=`<div class="ic">${ic}</div><div style="min-width:0"><div class="name">${esc(tt)}</div><div class="meta">${esc(sub)}</div></div>${fix?'<div class="acts"><button class="mini fix">'+fix[0]+'</button></div>':'<div></div>'}`;
     if(fix)el.querySelector('button').onclick=fix[1];L.appendChild(el)});
 }
-$('readyOpen').onclick=()=>{startGPS();renderReady();showSheet('readySheet');setTimeout(()=>{if($('readySheet').classList.contains('open'))renderReady()},3000)};
+$('readyOpen').onclick=()=>{startGPS();rainCheck().then(()=>{if($('readySheet').classList.contains('open'))renderReady()});renderReady();showSheet('readySheet');setTimeout(()=>{if($('readySheet').classList.contains('open'))renderReady()},3000)};
 /* ---------- telefono bloccato: il gruppo non ti vede e il giro non registra ---------- */
 let hiddenAt=null,lockAlertTxt=null,lockTipShown=false;
 function lockTip(){if(lockTipShown)return;lockTipShown=true;setTimeout(()=>toast('📱 Tieni lo schermo acceso: col telefono bloccato il gruppo non ti vede',3800),2600)}
@@ -1383,7 +1452,7 @@ document.addEventListener('visibilitychange',()=>{
 /* ---------- schermo acceso: lo chiedo una volta, prima di tenerlo acceso ---------- */
 function askAwake(){if(S.keepAwake!=null)return false;setTimeout(()=>showSheet('awakeSheet'),600);return true}
 function setAwake(v){S.keepAwake=v;saveS();$('sAwake').classList.toggle('on',v);if(v){wake();toast('☀️ Lo schermo resta acceso durante il giro',2200)}else{try{lock&&lock.release()}catch(e){}lock=null;toast('Ok: ricordati di non bloccare il telefono',2600)}if($('readySheet').classList.contains('open'))renderReady()}
-$('awakeYes').onclick=()=>{closeSheet();setAwake(true)};
+$('awakeYes').onclick=()=>{closeSheet();setAwake(true);motionStart()};
 $('awakeNo').onclick=()=>{closeSheet();setAwake(false)};
 $('sAwake').classList.toggle('on',S.keepAwake===true);$('sAwake').onclick=()=>setAwake(S.keepAwake!==true);
 if(S.keepAwake==null&&(sharing||rec))setTimeout(askAwake,3500);
@@ -1615,7 +1684,7 @@ function renderBases(){
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
 tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
-tog('sSaver','saver',applySaver);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
+tog('sSaver','saver',applySaver);tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
@@ -1643,7 +1712,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
     if(rec||(typeof dest!=='undefined'&&dest)){toast('Nuova versione di EDT Nav pronta: chiudi e riapri l\'app quando hai finito di registrare',6000);return}
     location.reload()});
 }
-if(location.hash==='#debug')window._edt={closeSheet,setFollow,ping,riders,behindSince,checkAlerts,get me(){return me}};
+if(location.hash==='#debug')window._edt={get lastKmh(){return lastKmh},get motionOn(){return motionOn},get impactAt(){return impactAt},closeSheet,setFollow,ping,riders,behindSince,checkAlerts,get me(){return me}};
 })();
 </script>
 </body>
