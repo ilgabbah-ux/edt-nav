@@ -25,13 +25,15 @@
     ids[mode] = { id: j.profileid, at: Date.now() }; return j.profileid;
   }
 
-  async function route(from, to, mode) {
-    // from/to: [lat, lon]
-    const lonlats = from[1].toFixed(6) + ',' + from[0].toFixed(6) + '|' + to[1].toFixed(6) + ',' + to[0].toFixed(6);
+  async function route(from, to, mode, vias) {
+    // from/to/vias: [lat, lon]; i punti di passaggio vanno in mezzo
+    const lonlats = [from].concat(vias || [], [to]).map(p => p[1].toFixed(6) + ',' + p[0].toFixed(6)).join('|');
     const isOff = !!FILES[mode];
     let profile = isOff ? await offProfile(mode) : 'car-fast';
     const ask = async (p) => {
-      const r = await timed(`${BR}?lonlats=${lonlats}&profile=${p}&alternativeidx=0&format=geojson`, null, 30000);
+      let r;
+      try { r = await timed(`${BR}?lonlats=${lonlats}&profile=${p}&alternativeidx=0&format=geojson`, null, 40000); }
+      catch (e) { r = await timed(`${BR}?lonlats=${lonlats}&profile=${p}&alternativeidx=0&format=geojson`, null, 40000); }
       const t = await r.text();
       if (!r.ok || t[0] !== '{') throw new Error(t.slice(0, 160) || ('HTTP ' + r.status));
       return JSON.parse(t);
@@ -60,10 +62,12 @@
     let time = +p['total-time'] || 0;
     if (isOff && tot) time = (dirt / 1000 / ({ off: 20, offm: 16, offh: 11 }[mode]) + (tot - dirt) / 1000 / 45) * 3600;
     return {
-      pts, len: +p['track-length'] || 0, time, asc: +p['filtered ascend'] || 0,
+      pts, len: +p['track-length'] || 0, time, asc: +p['filtered ascend'] || 0, desc: descOf(pts),
       dirtPct: tot ? Math.round(dirt / tot * 100) : null
     };
   }
+
+  function descOf(pts) { let d = 0, b = null; for (const p of pts) { if (p[2] == null) continue; if (b == null) { b = p[2]; continue; } if (b - p[2] > 4) { d += b - p[2]; b = p[2]; } else if (p[2] - b > 4) b = p[2]; } return d; }
 
   async function search(q, near) {
     let u = 'https://photon.komoot.io/api/?limit=7&q=' + encodeURIComponent(q);

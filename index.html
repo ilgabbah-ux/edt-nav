@@ -169,6 +169,26 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 .wide-btn{width:100%;min-height:52px;border-radius:12px;background:var(--panel2);border:2px solid var(--line);font-weight:700;font-size:16px;margin-top:10px}
 .wide-btn.go{background:var(--yellow);border-color:var(--yellow);color:#111;font-family:var(--display);font-weight:800;font-size:19px;text-transform:uppercase}
 
+/* scheda percorso */
+#routeCard{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:600;
+  background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:10px 12px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#routeCard.on{display:block}
+#routeCard .rt{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+#routeCard .rt b{font-family:var(--display);font-weight:800;font-size:19px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#routeCard .chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;color:#111;white-space:nowrap}
+#routeCard .rs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#routeCard .rs div{background:var(--panel2);border-radius:10px;padding:5px 6px;min-width:0}
+#routeCard .rs small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+#routeCard .rs strong{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#routeCard svg.elev{width:100%;height:46px;display:block;margin:6px 0}
+#routeCard .ra{display:grid;grid-template-columns:1.3fr 1fr auto;gap:6px}
+#routeCard .ra button{min-height:46px;border-radius:11px;background:var(--panel2);border:2px solid var(--line);font-weight:700;font-size:15px}
+#routeCard .ra .go{background:var(--yellow);border-color:var(--yellow);color:#111;font-family:var(--display);font-weight:800;font-size:17px;text-transform:uppercase}
+#routeCard .ra .on{border-color:var(--yellow);color:var(--yellow)}
+#routeCard .eh{font-size:12px;color:var(--muted);margin:6px 2px 0;display:none}
+#routeCard.edit .eh{display:block}
+.via{width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid #111;box-shadow:0 0 0 3px var(--yellow);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:12px;color:#111;cursor:grab}
+
 /* gruppo */
 #alerts{display:flex;flex-direction:column;gap:6px;margin-top:6px;pointer-events:auto}
 .alert{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-radius:10px;padding:8px 10px;
@@ -310,12 +330,19 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <button class="wide-btn go" id="rGo">Calcola percorso</button>
   <p class="hint" id="rInfo"></p>
 </section>
+<div id="routeCard" aria-label="Percorso">
+  <div class="rt"><b id="rcName">Percorso</b><span class="chip" id="rcMode">Off</span></div>
+  <div class="rs"><div><small>Totale</small><strong id="rcLen">–</strong></div><div><small>Tempo</small><strong id="rcTime">–</strong></div><div><small>Salita</small><strong id="rcUp">–</strong></div><div><small>Sterrato</small><strong id="rcDirt">–</strong></div></div>
+  <svg class="elev" id="rcElev" viewBox="0 0 300 46" preserveAspectRatio="none" aria-label="Profilo altimetrico"></svg>
+  <div class="ra"><button class="go" id="rcGo">Vai</button><button id="rcEdit">✎ Modifica</button><button id="rcClose" aria-label="Chiudi scheda">✕</button></div>
+  <p class="eh">Tocca la linea per aggiungere un punto di passaggio, trascina i punti bianchi per spostare il percorso, tocca un punto per toglierlo.</p>
+</div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
-<script src="mappa.js?v=22"></script>
-<script src="difficolta.js?v=22"></script>
-<script src="percorso.js?v=22"></script>
+<script src="mappa.js?v=23"></script>
+<script src="difficolta.js?v=23"></script>
+<script src="percorso.js?v=23"></script>
 <script>
 (()=>{
 /* ---------- utilità ---------- */
@@ -347,6 +374,7 @@ const BASES=EDTMAP.BASES;
 const map=new maplibregl.Map({container:'map',pixelRatio:Math.min(window.devicePixelRatio||1,1.5),renderWorldCopies:false,style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
   attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:65,fadeDuration:0});
 map.touchZoomRotate.disableRotation();
+if(location.hash==='#debug')window._edtmap=map;
 map.on('load',()=>document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
 map.keyboard.disableRotation();
 const EMPTY={type:'FeatureCollection',features:[]};
@@ -363,6 +391,7 @@ map.on('style.load',()=>{
   map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-opacity':['case',['has','s'],.75,1],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
   map.addLayer({id:'gpx-line',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','width'],'line-opacity':['get','op']}});
+  map.addLayer({id:'gpx-hit',type:'line',source:'gpx',paint:{'line-color':'#000','line-width':26,'line-opacity':0.01}});
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
   map.addLayer({id:'rec-line',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':S.recColor,'line-width':S.recWidth}});
   map.addLayer({id:'gpx-wpt',type:'circle',source:'gpxpts',filter:['==',['get','k'],'wpt'],paint:{'circle-radius':7,'circle-color':'#ffd21f','circle-stroke-color':'#111','circle-stroke-width':2}});
@@ -391,7 +420,7 @@ function gradeInfo(){const el=$('gradeInfo');if(!el)return;const st=EDTGRADE.sta
 let gT=null;EDTGRADE.onChange(()=>{clearTimeout(gT);gT=setTimeout(()=>{if(mapReady&&S.grades){const sig=gradeKeys.slice().sort().join('|')+'#'+EDTGRADE.loaded(gradeKeys);if(sig!==gradeSig){gradeSig=sig;map.getSource('grade')?.setData(EDTGRADE.collect(gradeKeys))}}gradeInfo()},300)});
 function boundsOf(points){const b=new maplibregl.LngLatBounds();points.forEach(p=>b.extend(ll(p)));return b}
 const PAD={top:170,bottom:120,left:30,right:30};
-function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:PAD,maxZoom:max||17,bearing:map.getBearing(),duration:600})}
+function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:$('routeCard').classList.contains('on')||cardSoon?{top:150,bottom:330,left:30,right:30}:PAD,maxZoom:max||17,bearing:map.getBearing(),duration:600})}
 
 /* ---------- GPX ---------- */
 function parseGPX(txt,fallback){
@@ -429,7 +458,7 @@ function refreshGpx(){
   const lines=[],pts=[];
   gpx.filter(t=>t.vis).forEach(t=>{
     if(t.pts.length>1){
-      lines.push({type:'Feature',properties:{color:t.color,casing:t.color==='#111111'?'#fff':'#000',width:t.width||5,op:(t.op||100)/100},geometry:{type:'LineString',coordinates:t.pts.map(ll)}});
+      lines.push({type:'Feature',properties:{tid:t.id,color:t.color,casing:t.color==='#111111'?'#fff':'#000',width:t.width||5,op:(t.op||100)/100},geometry:{type:'LineString',coordinates:t.pts.map(ll)}});
       pts.push({type:'Feature',properties:{k:'start',label:'PARTENZA'},geometry:{type:'Point',coordinates:ll(t.pts[0])}});
       pts.push({type:'Feature',properties:{k:'end',label:'ARRIVO'},geometry:{type:'Point',coordinates:ll(t.pts[t.pts.length-1])}});
     }
@@ -602,7 +631,7 @@ function nearest(t,p){
   }
   return best;
 }
-let wasOff=false;
+let wasOff=false,cardSoon=false;
 // tocco sul riquadro: mostra te e la traccia insieme; la ✕ spegne la navigazione
 $('navbar').onclick=e=>{
   if(e.target.closest('#navOff')){active=null;saveGpx();drawGpx();updateNav();toast('Navigazione spenta · la riaccendi da Tracce',2200);return}
@@ -857,22 +886,73 @@ cc.addEventListener('touchmove',e=>{if(!lpT||!lpXY)return;const t=e.touches[0],r
 async function calcRoute(silent){
   if(!dest){toast('Scegli prima dove andare');return}
   if(routing)return;routing=true;
-  const from=me||[map.getCenter().lat,map.getCenter().lng];
+  const from=(silent==='edit'&&routeFrom)?routeFrom:(me||[map.getCenter().lat,map.getCenter().lng]);
   if(!silent){$('rGo').textContent='Calcolo il percorso…';$('rInfo').textContent=''}
   try{
-    const r=await EDTROUTE.route(from,dest.pt,S.routeMode);
+    const old=gpx.find(x=>x.id==='route');
+    let vias=(old&&old.dest===dest&&old.vias)||[];
+    if(silent&&old&&me){const here=nearest(old,me).along;vias=vias.filter(v=>nearest(old,v).along>here)}   // tengo solo i passaggi ancora davanti
+    const r=await EDTROUTE.route(from,dest.pt,S.routeMode,vias);
     gpx=gpx.filter(x=>x.id!=='route');
-    const t={id:'route',name:'Verso '+dest.name,pts:r.pts,wpts:[],color:MODE_COLOR[S.routeMode]||'#2fb8ff',width:7,op:100,vis:true,dest,mode:S.routeMode};
+    const t={id:'route',name:'Verso '+dest.name,pts:r.pts,wpts:[],color:MODE_COLOR[S.routeMode]||'#2fb8ff',width:7,op:100,vis:true,dest,mode:S.routeMode,vias,from,stats:{len:r.len,time:r.time,asc:r.asc,desc:r.desc,dirt:r.dirtPct}};
     gpx.unshift(t);active='route';saveGpx();drawGpx();renderLists();updateNav();
     if(S.grades)EDTGRADE.along(r.pts);
     const mins=Math.max(1,Math.round(r.time/60)),dur=mins<60?mins+' min':Math.floor(mins/60)+' h '+String(mins%60).padStart(2,'0');
     const info=`${km(r.len)} · circa ${dur} · +${Math.round(r.asc)} m${r.dirtPct!=null?' · '+r.dirtPct+'% sterrato':''}`;
-    if(silent)toast('Percorso ricalcolato · '+info,3000);
-    else{$('rInfo').textContent=info;closeSheet();if(me)setFollow(true);else fitTo(t);toast('Percorso pronto · '+info,3500)}
-  }catch(e){if(!silent)$('rInfo').textContent='Percorso non calcolato: '+(navigator.onLine?'riprova tra poco':'serve la rete')+'.';else toast('Fuori percorso: ricalcolo non riuscito, riprovo',2500)}
+    if(silent==='edit'){showRouteCard();drawVias()}
+    else if(silent)toast('Percorso ricalcolato · '+info,3000);
+    else{$('rInfo').textContent=info;closeSheet();setFollow(false);cardSoon=true;showRouteCard();fitTo(t);cardSoon=false}
+  }catch(e){const why=!navigator.onLine?'serve la rete':/abort/i.test(e.name+e.message)?'il server non ha risposto in tempo, riprova':/target|island|not found|no route/i.test(e.message)?'nessuna strada percorribile fino a lì con questa scelta, prova un altro tipo o un punto vicino':'riprova tra poco';
+    if(silent==='edit')toast('Modifica non riuscita: '+why,3500);else if(!silent)$('rInfo').textContent='Percorso non calcolato: '+why+'.';else toast('Fuori percorso: ricalcolo non riuscito, riprovo',2500)}
   finally{routing=false;$('rGo').textContent='Calcola percorso'}
 }
 $('rGo').onclick=()=>calcRoute(false);
+// scheda del percorso: dati, profilo altimetrico, Vai / Modifica
+const MODE_NAME={fast:'Veloce asfalto',off:'Off facile',offm:'Off medio',offh:'Off hard'};
+function durTxt(sec){const m=Math.max(1,Math.round(sec/60));return m<60?m+' min':Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')}
+function showRouteCard(){
+  const t=gpx.find(x=>x.id==='route');if(!t){$('routeCard').classList.remove('on');return}
+  const st=t.stats||{len:trackLen(t.pts),time:0,asc:gain(t.pts),dirt:null};
+  $('rcName').textContent=t.name;$('rcMode').textContent=MODE_NAME[t.mode]||'Percorso';$('rcMode').style.background=t.color;
+  $('rcLen').textContent=km(st.len);$('rcTime').textContent=st.time?durTxt(st.time):'–';
+  $('rcUp').textContent='+'+Math.round(st.asc)+' m';$('rcDirt').textContent=st.dirt!=null?st.dirt+'%':'–';
+  // profilo altimetrico
+  const el=t.pts.filter(p=>p[2]!=null);let svg='';
+  if(el.length>2){const c=cumul(t),tot=c.at(-1)||1;let mn=Infinity,mx=-Infinity;t.pts.forEach(p=>{if(p[2]!=null){mn=Math.min(mn,p[2]);mx=Math.max(mx,p[2])}});const span=Math.max(30,mx-mn);
+    const step=Math.max(1,Math.floor(t.pts.length/150));let d='';
+    for(let i=0;i<t.pts.length;i+=step){const p=t.pts[i];if(p[2]==null)continue;const x=c[i]/tot*300,y=42-(p[2]-mn)/span*38;d+=(d?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}
+    svg=`<path d="${d}L300 46L0 46Z" fill="${t.color}" fill-opacity=".25"/><path d="${d}" fill="none" stroke="${t.color}" stroke-width="2"/><text x="3" y="11" font-size="10" fill="currentColor" opacity=".7">${Math.round(mx)} m</text><text x="3" y="44" font-size="10" fill="currentColor" opacity=".7">${Math.round(mn)} m</text>`}
+  $('rcElev').innerHTML=svg;$('rcElev').style.display=svg?'':'none';$('rcElev').style.color='var(--fg)';
+  $('routeCard').classList.add('on');
+}
+let editing2=false,viaMks=[];
+function drawVias(){
+  viaMks.forEach(m=>m.remove());viaMks=[];
+  const t=gpx.find(x=>x.id==='route');if(!editing2||!t)return;
+  (t.vias||[]).forEach((v,i)=>{const el=document.createElement('div');el.className='via';el.textContent=i+1;
+    const mk=new maplibregl.Marker({element:el,draggable:true}).setLngLat(ll(v)).addTo(map);
+    let moved=false;mk.on('dragstart',()=>moved=true);
+    mk.on('dragend',()=>{const p=mk.getLngLat();t.vias[i]=[p.lat,p.lng];rerouteEdit()});
+    el.addEventListener('click',ev=>{ev.stopPropagation();if(moved){moved=false;return}t.vias.splice(i,1);rerouteEdit()});
+    viaMks.push(mk)});
+}
+function rerouteEdit(){const t=gpx.find(x=>x.id==='route');if(!t)return;dest=t.dest;S.routeMode=t.mode;toast('Ricalcolo…',1200);
+  routeFrom=t.from;calcRoute('edit')}
+let routeFrom=null;
+$('rcGo').onclick=()=>{editing2=false;$('routeCard').classList.remove('edit');$('rcEdit').classList.remove('on');drawVias();$('routeCard').classList.remove('on');active='route';saveGpx();updateNav();startGPS();setFollow(true);toast('Buon giro! Tranquilli, è un giro easy',2200)};
+$('rcEdit').onclick=()=>{editing2=!editing2;$('routeCard').classList.toggle('edit',editing2);$('rcEdit').classList.toggle('on',editing2);drawVias();if(editing2)toast('Tocca la linea per aggiungere un passaggio',2200)};
+$('rcClose').onclick=()=>{editing2=false;drawVias();$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on')};
+// tocco sulla linea del percorso: apre la scheda, o in modifica aggiunge un passaggio nel punto giusto dell'ordine
+map.on('click','gpx-hit',e=>{
+  const f=e.features&&e.features[0];if(!f||f.properties.tid!=='route')return;
+  const t=gpx.find(x=>x.id==='route');if(!t)return;
+  if(!editing2){showRouteCard();return}
+  const p=[e.lngLat.lat,e.lngLat.lng],a=nearest(t,p).along;t.vias=t.vias||[];
+  let k=0;while(k<t.vias.length&&nearest(t,t.vias[k]).along<a)k++;
+  t.vias.splice(k,0,p);rerouteEdit();
+});
+map.on('mouseenter','gpx-hit',()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave','gpx-hit',()=>map.getCanvas().style.cursor='');
+
 // fuori dal percorso calcolato da più di 20 s: lo ricalcolo da dove sei
 function maybeReroute(off){
   const t=gpx.find(x=>x.id===active);
