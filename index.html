@@ -215,7 +215,10 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 #elev.on{display:block}#elev svg{position:absolute;inset:0;width:100%;height:100%}
 #elevTxt{position:absolute;right:8px;top:4px;font:800 13px var(--display);color:var(--fg);background:rgba(0,0,0,.55);padding:1px 6px;border-radius:6px;text-align:right;line-height:1.15}
 body.gloves #elev{display:none!important}
-#camBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 224px);font-size:24px}
+#camBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 224px)}
+svg.ic{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}svg.ic.big{width:26px;height:26px}
+#qmOpts button,#poiOpts button,#sosOpts button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}#qmOpts svg.ic,#poiOpts svg.ic,#sosOpts svg.ic{width:26px;height:26px}
+.tabs3 button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.tabs3 svg.ic{width:24px;height:24px}
 .phmk{width:40px;height:40px;border-radius:10px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);background-size:cover;background-position:center;cursor:pointer}
 .phgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.phgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:2px solid var(--line)}
 .rank{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;margin-top:6px}
@@ -232,6 +235,10 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 .ready .ic{font-size:20px;text-align:center}
 .ready .mini.fix{border-color:var(--yellow);color:var(--yellow)}
 #qmOpts button,#poiOpts button{margin:0;min-height:54px}
+.tabs4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 10px;position:sticky;top:-1px;z-index:2;background:var(--panel);padding:4px 0}
+.tabs4 button{min-height:46px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--fg);font:800 15px var(--display);text-transform:uppercase}
+.tabs4 button.on{border-color:var(--yellow);background:var(--yellow);color:#111}
+.shtab[hidden]{display:none}
 .tabs3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 10px}
 .tabs3 button{min-height:62px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--fg);font:800 17px var(--display);text-transform:uppercase;letter-spacing:.3px}
 .tabs3 button.on{border-color:var(--yellow);background:var(--yellow);color:#111}
@@ -290,7 +297,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     <svg id="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l7 19-7-4-7 4z" fill="#ffd21f"/></svg>
     <div id="navtxt">– <span>Carica una traccia GPX</span></div>
     <div id="navpct" style="font-family:var(--display);font-weight:800;font-size:18px;color:var(--muted)"></div>
-    <button id="navStart" aria-label="Portami alla partenza">🧭 Portami</button>
+    <button id="navStart" aria-label="Portami alla partenza"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M15.5 8.5l-2 5-5 2 2-5z"/></svg> Portami</button>
     <button id="navOff" aria-label="Spegni la navigazione">✕</button>
   </div>
   <div id="elev" aria-label="Profilo altimetrico, tocca per nascondere"><svg viewBox="0 0 400 58" preserveAspectRatio="none"><path id="elevFill" fill="rgba(255,210,31,.25)"/><path id="elevLine" fill="none" stroke="#ffd21f" stroke-width="1.6" vector-effect="non-scaling-stroke"/><path id="elevDone" fill="rgba(255,255,255,.12)"/><line id="elevMe" y1="0" y2="58" stroke="#e3261b" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg><div id="elevTxt"></div></div>
@@ -334,52 +341,52 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     </div>
   </div>
 </section>
-<button class="fab left" id="camBtn" aria-label="Foto del giro">📷</button>
+<button class="fab left" id="camBtn" aria-label="Foto del giro"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3zM12 10a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7"/></svg></button>
 <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
 <button class="fab left" id="sosBtn">IMPRE-<br>VISTO</button>
 <section class="sheet edit" id="sosSheet" aria-label="Segnala imprevisto">
-  <div class="sheet-h"><h2>Segnala <em>imprevisto</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
-  <div class="tabs3" id="sosTabs"><button data-t="msg">💬 Messaggio</button><button data-t="poi">⚠️ Segnala</button><button data-t="sos" class="sos">🆘 Imprevisto</button></div>
+  <div class="sheet-h"><h2>Avvisa il <em>gruppo</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <div class="tabs3" id="sosTabs"><button data-t="msg"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg> Messaggio</button><button data-t="poi"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg> Segnala</button><button data-t="sos" class="sos"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 8v8M8 12h8"/></svg> Imprevisto</button></div>
   <div class="sostab" data-t="msg">
   <h3 style="margin-top:0">Messaggio veloce al gruppo</h3>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="qmOpts">
-    <button class="wide-btn" data-m="PAUSA">⏸ Pausa</button>
-    <button class="wide-btn" data-m="BIVIO">🔀 Aspetto al bivio</button>
-    <button class="wide-btn" data-m="AVANTI">➡️ Vado avanti</button>
-    <button class="wide-btn" data-m="RIFORNIMENTO">⛽ Rifornimento</button>
-    <button class="wide-btn" data-m="BIRRA">🍺 Birra!</button>
-    <button class="wide-btn" data-m="OK">👍 Tutto ok</button>
+    <button class="wide-btn" data-m="PAUSA"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg> Pausa</button>
+    <button class="wide-btn" data-m="BIVIO"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-8M12 13L6 4M12 13l6-9M6 4H4M6 4v2M18 4h2M18 4v2"/></svg> Aspetto al bivio</button>
+    <button class="wide-btn" data-m="AVANTI"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg> Vado avanti</button>
+    <button class="wide-btn" data-m="RIFORNIMENTO"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 8h7M15 9l3 2v7a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg> Rifornimento</button>
+    <button class="wide-btn" data-m="BIRRA"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h10v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM15 10h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M5 7a3 3 0 0 1 3-3a3 3 0 0 1 4 0a3 3 0 0 1 3 3"/></svg> Birra!</button>
+    <button class="wide-btn" data-m="OK"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2l-2 7a2 2 0 0 1-2 1H7"/></svg> Tutto ok</button>
   </div>
   </div>
   <div class="sostab" data-t="poi">
   <h3 style="margin-top:0">Segnala sulla traccia (dove sei adesso)</h3>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="poiOpts">
-    <button class="wide-btn" data-p="guado">🌊 Guado</button>
-    <button class="wide-btn" data-p="fango">🟤 Fango</button>
-    <button class="wide-btn" data-p="buca">🕳️ Buca</button>
-    <button class="wide-btn" data-p="ramo">🌳 Albero</button>
-    <button class="wide-btn" data-p="animali">🐄 Animali</button>
-    <button class="wide-btn" data-p="pericolo">⚠️ Pericolo</button>
-    <button class="wide-btn" data-p="bivio">↩️ Bivio sbagliato</button>
-    <button class="wide-btn" data-p="panorama">📸 Panorama</button>
-    <button class="wide-btn" data-p="fontana">🚰 Fontana</button>
-    <button class="wide-btn" data-p="mangiare">🍝 Mangiare</button>
+    <button class="wide-btn" data-p="guado"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg> Guado</button>
+    <button class="wide-btn" data-p="fango"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17c3-4 5-4 7-1s5 3 8-2M7 9a2 2 0 1 0 0 .1M15 7a1.6 1.6 0 1 0 0 .1"/></svg> Fango</button>
+    <button class="wide-btn" data-p="buca"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14c0-3 4-5 9-5s9 2 9 5-4 4-9 4-9-1-9-4zM7 14c1-1.5 3-2 5-2s4 .5 5 2"/></svg> Buca</button>
+    <button class="wide-btn" data-p="ramo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l6 9h-3l4 6H5l4-6H6zM12 17v5"/></svg> Albero</button>
+    <button class="wide-btn" data-p="animali"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8a2 2 0 1 0 0 .1M9 5a2 2 0 1 0 0 .1M15 5a2 2 0 1 0 0 .1M19 8a2 2 0 1 0 0 .1M12 11c3 0 6 4 6 7a2 2 0 0 1-2 2c-1.5 0-2.5-1-4-1s-2.5 1-4 1a2 2 0 0 1-2-2c0-3 3-7 6-7z"/></svg> Animali</button>
+    <button class="wide-btn" data-p="pericolo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg> Pericolo</button>
+    <button class="wide-btn" data-p="bivio"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 20V9a4 4 0 0 1 8 0v6M13 11l4 4 4-4"/></svg> Bivio sbagliato</button>
+    <button class="wide-btn" data-p="panorama"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3zM12 10a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7"/></svg> Panorama</button>
+    <button class="wide-btn" data-p="fontana"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/></svg> Fontana</button>
+    <button class="wide-btn" data-p="mangiare"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v8a2 2 0 0 0 4 0V3M8 11v10M16 3c-2 2-2 6 0 8v10"/></svg> Mangiare</button>
   </div>
   <p class="hint">I pericoli avvisano chi arriva dietro 200 m prima. Tutti i punti restano anche nella traccia.</p>
   </div>
   <div class="sostab" data-t="sos">
   <p class="hint" style="margin-top:0">Il gruppo vede il tuo pallino rosso con il motivo e riceve un avviso.</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="sosOpts">
-    <button class="wide-btn" data-r="FERMO" style="margin:0;min-height:70px">✋ Sono fermo</button>
-    <button class="wide-btn" data-r="ASPETTATEMI" style="margin:0;min-height:70px">⏳ Aspettatemi</button>
-    <button class="wide-btn" data-r="CADUTA" style="margin:0;min-height:70px">💥 Caduta</button>
-    <button class="wide-btn" data-r="GUASTO" style="margin:0;min-height:70px">🔧 Guasto / foratura</button>
-    <button class="wide-btn" data-r="BENZINA" style="margin:0;min-height:70px">⛽ Benzina</button>
-    <button class="wide-btn" data-r="AIUTO" style="margin:0;min-height:70px;border-color:var(--red);color:#ff8a80">🆘 Serve aiuto</button>
+    <button class="wide-btn" data-r="FERMO" style="margin:0;min-height:70px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7c-3 0-5-2-6-4l-2-4a1.5 1.5 0 0 1 2.5-1.5L6 13"/></svg> Sono fermo</button>
+    <button class="wide-btn" data-r="ASPETTATEMI" style="margin:0;min-height:70px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 3"/></svg> Aspettatemi</button>
+    <button class="wide-btn" data-r="CADUTA" style="margin:0;min-height:70px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-4 5v-6l-6-1 5-3-3-5 6 2z"/></svg> Caduta</button>
+    <button class="wide-btn" data-r="GUASTO" style="margin:0;min-height:70px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6a4 4 0 0 0 5 5l-9 9a2 2 0 0 1-3-3l9-9a4 4 0 0 0-2-2z"/></svg> Guasto / foratura</button>
+    <button class="wide-btn" data-r="BENZINA" style="margin:0;min-height:70px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 8h7M15 9l3 2v7a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg> Benzina</button>
+    <button class="wide-btn" data-r="AIUTO" style="margin:0;min-height:70px;border-color:var(--red);color:#ff8a80"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 8v8M8 12h8"/></svg> Serve aiuto</button>
   </div>
-  <button class="wide-btn" id="sosHelp" style="border-color:var(--red);color:#ff8a80">🆘 Soccorso 112 con le coordinate</button>
-  <button class="wide-btn" id="sosShare">📍 Manda posizione e motivo su WhatsApp…</button>
-  <button class="wide-btn go" id="sosOk" style="background:var(--green);border-color:var(--green)">✅ Tutto ok, riparto</button>
+  <button class="wide-btn" id="sosHelp" style="border-color:var(--red);color:#ff8a80"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a11 11 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/></svg> Soccorso 112 con le coordinate</button>
+  <button class="wide-btn" id="sosShare"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 7a3 3 0 1 0 0 6a3 3 0 1 0 0-6"/></svg> Manda posizione e motivo su WhatsApp…</button>
+  <button class="wide-btn go" id="sosOk" style="background:var(--green);border-color:var(--green)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg> Tutto ok, riparto</button>
   </div>
 </section>
 
@@ -398,17 +405,23 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <div id="scrim"></div>
 <section id="sheet" aria-label="Tracce">
   <div class="sheet-h"><h2>Tracce <em>EDT</em></h2><button class="close" id="closeSheet" aria-label="Chiudi">✕</button></div>
+  <div class="tabs4" id="shTabs"><button data-t="giro">Giro</button><button data-t="gruppo">Gruppo</button><button data-t="giri">Miei giri</button><button data-t="foto">Foto</button></div>
+  <div class="shtab" data-t="giro">
   <button class="load" id="loadBtn">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>
     Carica GPX
   </button>
-  <button class="wide-btn" id="readyOpen" style="margin-top:8px;border-color:var(--yellow);color:var(--yellow)">✅ Pronto per il giro?</button>
-  <button class="wide-btn" id="archOpen" style="margin-top:8px">🗂️ Archivio tracce EDT</button>
-  <button class="wide-btn" id="routeOpen" style="margin-top:8px">🧭 Naviga verso…</button>
-  <button class="wide-btn" id="posShare" style="margin-top:8px">📍 Manda la mia posizione (WhatsApp…)</button>
-  <button class="wide-btn" id="zoneDl" style="margin-top:8px">📥 Scarica la zona del giro (per quando non c'è campo)</button>
+  <button class="wide-btn" id="readyOpen" style="margin-top:8px;border-color:var(--yellow);color:var(--yellow)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg> Pronto per il giro?</button>
+  <h3>Da seguire</h3>
+  <div class="list" id="gpxList"></div>
+  <h3>Strumenti</h3>
+  <button class="wide-btn" id="archOpen" style="margin-top:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/></svg> Archivio tracce EDT</button>
+  <button class="wide-btn" id="routeOpen" style="margin-top:8px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M15.5 8.5l-2 5-5 2 2-5z"/></svg> Naviga verso…</button>
+  <button class="wide-btn" id="zoneDl" style="margin-top:8px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Scarica la zona del giro (per quando non c'è campo)</button>
+  <button class="wide-btn" id="posShare" style="margin-top:8px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 7a3 3 0 1 0 0 6a3 3 0 1 0 0-6"/></svg> Manda la mia posizione (WhatsApp…)</button>
+  </div>
   <input type="file" id="fileIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple hidden>
-  <h3>Gruppo del giro</h3>
+  <div class="shtab" data-t="gruppo" hidden>
   <div class="form">
     <label>Nome<input id="fName" maxlength="20" placeholder="Ilgabbah" autocomplete="nickname"></label>
     <label>Numero<input id="fNo" maxlength="4" inputmode="numeric" placeholder="69"></label>
@@ -419,11 +432,16 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <button class="share" id="shareToggle">Condividi la mia posizione</button>
   <p class="hint" id="shareHint">Solo chi usa lo stesso codice gruppo ti vede. Si spegne quando premi di nuovo.</p>
   <div class="list" id="crewList" style="margin-top:8px"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn" id="rankOpen" style="margin:0">🏆 Classifica</button><button class="wide-btn" id="phOpen" style="margin:0">📸 Foto del giro</button></div>
-  <h3>Da seguire</h3>
-  <div class="list" id="gpxList"></div>
-  <h3>I tuoi giri registrati</h3>
+  <button class="wide-btn" id="rankOpen"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/></svg> Classifica del gruppo</button>
+  </div>
+  <div class="shtab" data-t="giri" hidden>
   <div class="list" id="recList"></div>
+  </div>
+  <div class="shtab" data-t="foto" hidden>
+  <p class="hint" style="margin-top:0">Ogni foto resta sulla mappa nel punto in cui l'hai scattata. Scattale col tasto della fotocamera sulla mappa.</p>
+  <div class="phgrid" id="phGrid"></div>
+  <button class="wide-btn go" id="phShareAll"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Condividi le foto di oggi</button>
+  </div>
 </section>
 <section class="sheet" id="mapSheet" aria-label="Mappe e impostazioni">
   <div class="sheet-h"><h2>Mappe <em>&amp;</em> impostazioni</h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
@@ -450,11 +468,11 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <h3>Benzina</h3>
   <div class="row"><div class="t">Autonomia con un pieno<small id="fuelInfo">Ti avvisa quando sei in riserva</small></div><div class="seg" id="sTank"><button data-v="0">Off</button><button data-v="100">100</button><button data-v="150">150</button><button data-v="200">200</button><button data-v="250">250</button><button data-v="300">300</button></div></div>
   <div class="row"><div class="t">Avvisa in riserva da</div><div class="seg" id="sReserve"><button data-v="20">20 km</button><button data-v="30">30 km</button><button data-v="50">50 km</button></div></div>
-  <button class="wide-btn" id="fuelFull" style="margin-top:6px">⛽ Ho fatto il pieno</button>
+  <button class="wide-btn" id="fuelFull" style="margin-top:6px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 8h7M15 9l3 2v7a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg> Ho fatto il pieno</button>
   <h3>Backup dei giri su Drive</h3>
   <div class="row"><div class="t">Salva i giri registrati su Drive<small id="bkInfo">Archivio EDT, cartella "Giri EDT Nav"</small></div><button class="tog" id="sBackup" aria-label="Backup su Drive"></button></div>
   <div class="form" style="grid-template-columns:1fr"><label>Codice archivio<input id="bkKey" type="password" autocomplete="off" placeholder="Te lo dà il Gabbah"></label></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="wide-btn" id="bkNow" style="margin:0">⬆️ Salva adesso</button><button class="wide-btn" id="bkRestore" style="margin:0">⬇️ Recupera da Drive</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="wide-btn" id="bkNow" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V8M7 13l5-5 5 5M5 4h14"/></svg> Salva adesso</button><button class="wide-btn" id="bkRestore" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg> Recupera da Drive</button></div>
   <h3>Schermo</h3>
   <div class="row"><div class="t">Schermo sempre acceso<small>Mentre condividi col gruppo o registri il telefono non si blocca da solo</small></div><button class="tog" id="sAwake" aria-label="Schermo sempre acceso"></button></div>
   <div class="row"><div class="t">Profilo altimetrico<small>Sotto la barra della traccia: dove sei e la prossima salita</small></div><button class="tog" id="sElev" aria-label="Profilo altimetrico"></button></div>
@@ -462,6 +480,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div class="row"><div class="t">Risparmio batteria<small>Schermo più scuro, posizione al gruppo ogni 45 s, niente 3D</small></div><button class="tog" id="sSaver" aria-label="Risparmio batteria"></button></div>
   <div class="row"><div class="t">Tema</div><div class="seg" id="sTheme"><button data-v="dark">Scuro</button><button data-v="light">Chiaro</button><button data-v="auto">Auto</button></div></div>
   <div class="row"><div class="t">Alto contrasto</div><button class="tog" id="sContrast" aria-label="Alto contrasto"></button></div>
+  <div class="row"><div class="t">Contrasto forte col sole<small>Di giorno bordi e scritte più marcati, per leggere meglio in pieno sole</small></div><button class="tog" id="sDayContrast" aria-label="Contrasto forte col sole"></button></div>
   <div class="row"><div class="t">Grandezza pulsanti e dati</div><div class="seg" id="sUi"><button data-v="0.9">S</button><button data-v="1">M</button><button data-v="1.15">L</button><button data-v="1.3">XL</button></div></div>
   <div class="row"><div class="t">Scritte mappa grandi<small>Ingrandisce nomi e simboli della mappa</small></div><button class="tog" id="sBig" aria-label="Scritte grandi"></button></div>
   <h3>Riquadri dati in alto</h3>
@@ -491,7 +510,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div data-s="3" hidden>
     <div class="stepn">3 DI 3 · IL GIRO</div>
     <p class="hint">Carica il GPX del giro, oppure aspetta: quando chi organizza lo manda al gruppo, ti arriva da solo.</p>
-    <button class="wide-btn" id="oLoad">📂 Carica il GPX del giro</button>
+    <button class="wide-btn" id="oLoad"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/></svg> Carica il GPX del giro</button>
     <button class="wide-btn go" id="oDone">Fatto, si parte! 🏍️</button>
     <p class="hint" style="text-align:center">Tranquilli, è un giro easy 😏</p>
   </div>
@@ -506,37 +525,31 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <section class="sheet" id="rideSheet" aria-label="Riepilogo del giro">
   <div class="sheet-h"><h2>Il tuo <em>giro</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <img id="rideImg" alt="Riepilogo del giro" style="width:100%;border-radius:12px;border:2px solid var(--line)">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn go" id="rideShare" style="margin:0">📤 Condividi</button><button class="wide-btn" id="rideSave" style="margin:0">💾 Salva immagine</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn go" id="rideShare" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Condividi</button><button class="wide-btn" id="rideSave" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h8M8 21v-7h8v7"/></svg> Salva immagine</button></div>
 </section>
 <section class="sheet" id="rankSheet" aria-label="Classifica">
   <div class="sheet-h"><h2>Classifica <em>EDT</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <div id="rankBody"><div class="empty">Carico…</div></div>
-</section>
-<section class="sheet" id="photoSheet" aria-label="Foto del giro">
-  <div class="sheet-h"><h2>Foto del <em>giro</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
-  <p class="hint" style="margin-top:0">Ogni foto resta sulla mappa nel punto in cui l'hai scattata.</p>
-  <div class="phgrid" id="phGrid"></div>
-  <button class="wide-btn go" id="phShareAll">📤 Condividi le foto di oggi</button>
 </section>
 <section class="sheet" id="helpSheet" aria-label="Soccorso 112">
   <div class="sheet-h"><h2>🆘 Soccorso <em>112</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <p class="hint" style="margin-top:0">Leggi queste coordinate all'operatore del 112: le chiede sempre in montagna.</p>
   <div id="helpCoords" style="font-family:var(--display);font-weight:800;font-size:30px;line-height:1.15;text-align:center;background:var(--bg);border:2px solid var(--yellow);border-radius:14px;padding:12px;user-select:all">–</div>
   <p class="hint" id="helpMore" style="text-align:center"></p>
-  <a class="wide-btn go" id="helpCall" href="tel:112" style="display:grid;place-items:center;text-decoration:none;background:var(--red);border-color:var(--red);color:#fff;font-size:22px">📞 Chiama il 112</a>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn" id="helpCopy" style="margin:0">📋 Copia coordinate</button><button class="wide-btn" id="helpShare" style="margin:0">📍 Manda su WhatsApp</button></div>
+  <a class="wide-btn go" id="helpCall" href="tel:112" style="display:grid;place-items:center;text-decoration:none;background:var(--red);border-color:var(--red);color:#fff;font-size:22px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a11 11 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/></svg> Chiama il 112</a>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn" id="helpCopy" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h12v12H8zM4 16V4h12"/></svg> Copia coordinate</button><button class="wide-btn" id="helpShare" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 7a3 3 0 1 0 0 6a3 3 0 1 0 0-6"/></svg> Manda su WhatsApp</button></div>
 </section>
 <section class="sheet" id="crashSheet" aria-label="Caduta">
   <div class="sheet-h"><h2>Sei <em>caduto?</em></h2></div>
   <p style="margin:0;line-height:1.45">Ho sentito un colpo forte e sei fermo. Se non rispondi, tra <b id="crashSec" style="font-size:26px;color:var(--yellow)">60</b> secondi avviso il gruppo con la tua posizione.</p>
-  <button class="wide-btn go" id="crashOk" style="background:var(--green);border-color:var(--green);min-height:80px;font-size:22px">👍 Sto bene</button>
-  <button class="wide-btn" id="crashHelp" style="border-color:var(--red);color:#ff8a80;min-height:64px">💥 Avvisa subito il gruppo</button>
+  <button class="wide-btn go" id="crashOk" style="background:var(--green);border-color:var(--green);min-height:80px;font-size:22px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2l-2 7a2 2 0 0 1-2 1H7"/></svg> Sto bene</button>
+  <button class="wide-btn" id="crashHelp" style="border-color:var(--red);color:#ff8a80;min-height:64px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-4 5v-6l-6-1 5-3-3-5 6 2z"/></svg> Avvisa subito il gruppo</button>
 </section>
 <section class="sheet" id="awakeSheet" aria-label="Schermo acceso">
   <div class="sheet-h"><h2>Schermo <em>sempre acceso?</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <p style="margin:0 0 8px;line-height:1.45">Durante il giro EDT Nav può tenere lo <b>schermo acceso</b> e impedire che il telefono si blocchi da solo.</p>
   <p class="hint" style="margin-top:0">Se il telefono si blocca, il gruppo non ti vede più e il giro non si registra. Consuma un po' più di batteria: se non hai il caricatore sulla moto attiva anche il risparmio batteria. Puoi cambiare idea quando vuoi nelle impostazioni.</p>
-  <button class="wide-btn go" id="awakeYes">☀️ Sì, tienilo acceso durante il giro</button>
+  <button class="wide-btn go" id="awakeYes"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg> Sì, tienilo acceso durante il giro</button>
   <button class="wide-btn" id="awakeNo">No, lo gestisco io</button>
 </section>
 <section class="sheet" id="readySheet" aria-label="Pronto per il giro">
@@ -566,7 +579,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div class="seg" id="rMode" style="width:100%;display:grid;grid-template-columns:1fr 1fr"><button data-v="fast" style="min-height:52px">⚡ Veloce asfalto</button><button data-v="off" style="min-height:52px">🟢 Off facile</button><button data-v="offm" style="min-height:52px">🟠 Off medio</button><button data-v="offh" style="min-height:52px">🔴 Off hard</button></div>
   <p class="hint" id="rModeHint"></p>
   <button class="wide-btn go" id="rGo">Calcola percorso</button>
-  <button class="wide-btn" id="rRally" hidden>🏁 Metti qui il ritrovo del gruppo</button>
+  <button class="wide-btn" id="rRally" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h12l-3 4 3 4H5"/></svg> Metti qui il ritrovo del gruppo</button>
   <p class="hint" id="rInfo"></p>
 </section>
 <div id="routeCard" aria-label="Percorso">
@@ -622,7 +635,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false,elev:true},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false,elev:true,dayContrast:true},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -1021,7 +1034,8 @@ function renderLists(){
     rl.appendChild(d);
   });
 }
-function openSheet(){renderLists();if(typeof zoneLabel==='function'&&!zoneBusy)zoneLabel();if(typeof renderCrew==='function')renderCrew();showSheet('sheet')}
+function shTab(t){t=t||store.get('edt_shtab','giro');store.set('edt_shtab',t);$('shTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.shtab').forEach(d=>d.hidden=d.dataset.t!==t);if(t==='foto'&&typeof renderPhotos==='function')renderPhotos()}
+function openSheet(tab){shTab(typeof tab==='string'?tab:null);renderLists();if(typeof zoneLabel==='function'&&!zoneBusy)zoneLabel();if(typeof renderCrew==='function')renderCrew();showSheet('sheet')}
 function showSheet(id){document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.toggle('open',s.id===id));$('scrim').classList.add('open')}
 function closeSheet(){document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.remove('open'));$('scrim').classList.remove('open')}
 $('tracksBtn').onclick=openSheet;$('closeSheet').onclick=closeSheet;$('scrim').onclick=closeSheet;
@@ -1086,7 +1100,8 @@ function setSharing(v){
   shareUI();
 }
 $('shareToggle').onclick=()=>setSharing(!sharing);
-$('shareBtn').onclick=()=>{if(!sharing){openSheet();$('fName').scrollIntoView({block:'center'})}else openSheet()};
+$('shareBtn').onclick=()=>{openSheet('gruppo');if(!sharing)setTimeout(()=>$('fName').scrollIntoView({block:'center'}),300)};
+$('shTabs').onclick=e=>{const b=e.target.closest('button');if(b)shTab(b.dataset.t)};
 let sosArmed=false;
 function sosTab(t){t=t||store.get('edt_sostab','msg');store.set('edt_sostab',t);$('sosTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.sostab').forEach(d=>d.hidden=d.dataset.t!==t)}
 $('sosTabs').onclick=e=>{const b=e.target.closest('button');if(b)sosTab(b.dataset.t)};
@@ -1115,7 +1130,8 @@ function zoneTiles(pts,z){
 }
 var zoneBusy=false;
 function zoneLabel(){const t=gpx.find(x=>x.id===active);
-  $('zoneDl').textContent=t&&t.zone?'✅ Zona del giro salvata ('+new Date(t.zone).toLocaleDateString('it-IT',{day:'numeric',month:'short'})+') · riscarica':'📥 Scarica la zona del giro (per quando non c\'è campo)'}
+  const I=k=>'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="'+(k?'M4 12l5 5L20 6':'M12 4v11M7 10l5 5 5-5M5 20h14')+'"/></svg> ';
+  $('zoneDl').innerHTML=t&&t.zone?I(1)+'Zona del giro salvata ('+new Date(t.zone).toLocaleDateString('it-IT',{day:'numeric',month:'short'})+') · riscarica':I(0)+'Scarica la zona del giro (per quando non c\'è campo)'}
 const zoneTrack=()=>gpx.find(x=>x.id===active&&x.pts.length>1&&x.id!=='route')||gpx.find(x=>x.vis&&x.pts.length>1&&x.id!=='route');
 $('zoneDl').onclick=()=>downloadZone(zoneTrack(),false);
 async function downloadZone(t,auto){
@@ -1467,6 +1483,7 @@ function sunTimes(lat,lon,date){const r=Math.PI/180,dayMs=864e5,J1970=2440588,J2
 const hm=d=>d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 let sunWarned=false,sunTxt=null;
 function sunTick(){const p=me||[map.getCenter().lat,map.getCenter().lng];const s=sunTimes(p[0],p[1],new Date()),now=Date.now();
+  const day=now>s.rise.getTime()+3600e3&&now<s.set.getTime()-3600e3;if(window._isDay!==day){window._isDay=day;applyTheme()}
   if(S.autoNight&&(S.base==='edt'||S.base==='edtnight')){const want=now>s.set.getTime()||now<s.rise.getTime()?'edtnight':'edt';if(S.base!==want){S.base=want;saveS();setBase();toast(want==='edtnight'?'🌙 Mappa notte':'☀️ Mappa giorno',1800)}}
   const t=gpx.find(x=>x.id===active&&x.vis);const toSet=(s.set-now)/60000;
   if(t&&st.left>500&&toSet>0&&toSet<100){const v=Math.max(20,lastKmh>8?lastKmh:25),eta=st.left/1000/v*60;
@@ -1545,8 +1562,8 @@ $('camIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)
     const p={id:Date.now().toString(36),t:Date.now(),lat:me?+me[0].toFixed(6):null,lon:me?+me[1].toFixed(6):null,th};await idbPut('ph_'+p.id,blob);
     photos.push(p);store.set('edt_photos',photos);phMarker(p);toast('📸 Foto salvata sulla mappa'+(me?'':' (senza posizione GPS)'),2000)}catch(err){toast('Foto non salvata',2000)}};
 photos.forEach(phMarker);
-$('phOpen').onclick=()=>{const G=$('phGrid');G.innerHTML=photos.length?'':'<div class="empty" style="grid-column:1/-1">Nessuna foto: usa il tasto 📷 sulla mappa.</div>';
-  photos.slice().reverse().forEach(p=>{const im=document.createElement('img');im.src=p.th;im.onclick=()=>{closeSheet();if(p.lat!=null)map.easeTo({center:[p.lon,p.lat],zoom:16});setTimeout(()=>phOpen(p),500)};G.appendChild(im)});showSheet('photoSheet')};
+function renderPhotos(){const G=$('phGrid');G.innerHTML=photos.length?'':'<div class="empty" style="grid-column:1/-1">Nessuna foto: usa il tasto 📷 sulla mappa.</div>';
+  photos.slice().reverse().forEach(p=>{const im=document.createElement('img');im.src=p.th;im.onclick=()=>{closeSheet();if(p.lat!=null)map.easeTo({center:[p.lon,p.lat],zoom:16});setTimeout(()=>phOpen(p),500)};G.appendChild(im)})}
 $('phShareAll').onclick=async()=>{const d0=new Date();d0.setHours(0,0,0,0);const fs=[];for(const p of photos.filter(x=>x.t>=d0)){const b=await idbGet('ph_'+p.id);if(b)fs.push(new File([b],'EDT-'+p.id+'.jpg',{type:'image/jpeg'}))}
   if(!fs.length){toast('Nessuna foto oggi');return}try{if(navigator.canShare&&navigator.canShare({files:fs}))await navigator.share({files:fs,title:'Foto del giro EDT'});else toast('Il telefono non permette di condividerle tutte insieme',2500)}catch(e){}};
 /* ---------- archivio tracce EDT su Drive (con codice) ---------- */
@@ -1661,7 +1678,7 @@ function renderReady(){
     me&&lastAcc!=null&&lastAcc<=30?['✅','GPS','Preciso a '+Math.round(lastAcc)+' m']:['⚠️','GPS',me?'Segnale debole: mettiti all\'aperto':'Non ancora attivo',watchId==null?['Attiva',()=>{startGPS();setTimeout(renderReady,4000)}]:null],
     t?['✅','Traccia del giro',t.name]:['⚠️','Traccia del giro','Nessuna caricata',['Carica',()=>$('fileIn').click()]],
     t&&t.zone?['✅','Mappa senza campo','Zona salvata il '+new Date(t.zone).toLocaleDateString('it-IT',{day:'numeric',month:'short'})]:['⚠️','Mappa senza campo',zoneBusy?'Sto scaricando…':'Zona del giro non ancora salvata',t&&!zoneBusy?['Scarica',()=>{downloadZone(t,false);setTimeout(renderReady,300)}]:null],
-    sharing&&crew.name?['✅','Gruppo',crew.name+(crew.no?' #'+crew.no:'')+' · gruppo '+crew.group+(crew.role?' · '+(crew.role==='A'?'apripista':'scopa'):'')]:['⚠️','Gruppo',crew.name?'Condivisione spenta':'Manca il tuo nome',['Attiva',()=>{if(crew.name)setSharing(true);else{openSheet();$('fName').scrollIntoView({block:'center'});$('fName').focus()}renderReady()}]],
+    sharing&&crew.name?['✅','Gruppo',crew.name+(crew.no?' #'+crew.no:'')+' · gruppo '+crew.group+(crew.role?' · '+(crew.role==='A'?'apripista':'scopa'):'')]:['⚠️','Gruppo',crew.name?'Condivisione spenta':'Manca il tuo nome',['Attiva',()=>{if(crew.name)setSharing(true);else{openSheet('gruppo');setTimeout(()=>{$('fName').scrollIntoView({block:'center'});$('fName').focus()},300)}renderReady()}]],
     batt?(batt.level>=.6||batt.charging?['✅','Batteria',Math.round(batt.level*100)+'%'+(batt.charging?' · in carica':'')]:['⚠️','Batteria',Math.round(batt.level*100)+'%: carica il telefono o porta un powerbank']):['ℹ️','Batteria','Controlla che sia carica (o porta un powerbank)'],
     S.keepAwake!==true?['⚠️','Schermo acceso',S.keepAwake===false?'Spento: se blocchi il telefono il gruppo non ti vede':'Non ancora scelto',['Attiva',()=>setAwake(true)]]:'wakeLock' in navigator?(lock?['✅','Schermo acceso','Resta acceso da solo: non bloccare il telefono']:['⚠️','Schermo acceso','Non bloccare il telefono: il gruppo non ti vedrebbe',['Tienilo acceso',()=>{wake().then(()=>setTimeout(renderReady,300))}]]):['ℹ️','Schermo acceso','Alza lo spegnimento automatico dello schermo nelle impostazioni del telefono e non bloccarlo durante il giro'],
     (()=>{const p=me||[map.getCenter().lat,map.getCenter().lng],s=sunTimes(p[0],p[1],new Date());return ['🌇','Tramonto','Oggi alle '+hm(s.set)+(Date.now()<s.set?' · tra '+Math.round((s.set-Date.now())/60000)+' min':'')]})(),
@@ -1826,7 +1843,7 @@ $('rcDel').onclick=()=>{editing2=false;drawVias();gpx=gpx.filter(x=>x.id!=='rout
 $('rcClose').onclick=()=>{editing2=false;drawVias();$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on')};
 // tocco sulla linea del percorso: apre la scheda, o in modifica aggiunge un passaggio nel punto giusto dell'ordine
 map.on('click','gpx-hit',e=>{
-  const f=e.features&&e.features[0];if(!f)return;if(f.properties.tid!=='route'){if(!editing2)openSheet();return}
+  const f=e.features&&e.features[0];if(!f)return;if(f.properties.tid!=='route'){if(!editing2)openSheet('giro');return}
   const t=gpx.find(x=>x.id==='route');if(!t)return;
   if(!editing2){showRouteCard();return}
   const p=[e.lngLat.lat,e.lngLat.lng],a=nearest(t,p).along;t.vias=t.vias||[];
@@ -1899,7 +1916,7 @@ setInterval(renderStats,1000);
 /* ---------- pannello mappe e impostazioni ---------- */
 function applyTheme(){
   const light=S.theme==='light'||(S.theme==='auto'&&matchMedia('(prefers-color-scheme: light)').matches);
-  document.body.classList.toggle('light',light);document.body.classList.toggle('contrast',S.contrast);
+  document.body.classList.toggle('light',light);document.body.classList.toggle('contrast',S.contrast||(S.dayContrast&&window._isDay===true));
   document.querySelector('meta[name=theme-color]').content=light?'#f3f1ea':'#0d0d0c';
   document.documentElement.style.setProperty('--ui',S.gloves?Math.max(S.ui,1.4):S.ui);document.body.classList.toggle('gloves',!!S.gloves);
 }
@@ -1919,7 +1936,7 @@ function renderBases(){
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
 tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
-tog('sSaver','saver',applySaver);tog('sElev','elev',()=>{elevKey='';elevUpdate()});tog('sGloves','gloves',()=>{applyTheme();toast(S.gloves?'🧤 Modalità guanti':'Modalità normale',1500)});tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
+tog('sSaver','saver',applySaver);tog('sDayContrast','dayContrast',applyTheme);tog('sElev','elev',()=>{elevKey='';elevUpdate()});tog('sGloves','gloves',()=>{applyTheme();toast(S.gloves?'🧤 Modalità guanti':'Modalità normale',1500)});tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
