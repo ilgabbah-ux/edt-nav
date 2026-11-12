@@ -1,3 +1,0 @@
-<!doctype html><meta charset="utf-8"><body>relay<script>
-fetch('a.mp3').then(r=>r.arrayBuffer()).then(b=>{document.body.textContent='sending '+b.byteLength;(window.opener||parent).postMessage({edtfile:'circle_audio.mp3',type:'audio/mpeg',buf:b},'*');document.body.textContent='sent '+b.byteLength;});
-</script>
