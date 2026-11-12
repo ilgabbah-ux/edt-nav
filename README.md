@@ -9,3 +9,4 @@ App: https://ilgabbah-ux.github.io/edt-nav/
 - `server/Codice.gs` — servizio posizioni del gruppo (Google Apps Script "EDT Nav server")
 - `mappa.js` — stili della mappa: "EDT giorno" e "EDT notte" (vettoriali OpenFreeMap/OpenStreetMap, stile tipo DMD2) più le mappe raster
 - `difficolta.js` — colori per grado delle sterrate (tracktype/smoothness da OpenStreetMap via Overpass), salvati sul telefono per l'offline
+- `grade/` — grado delle sterrate del Nord-Ovest a tasselli z12, generato con `tools/estrai-difficolta.py` dall'estratto Geofabrik `italy/nord-ovest`

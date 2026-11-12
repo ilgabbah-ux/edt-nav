@@ -1,7 +1,9 @@
 /* EDT Nav · colori per grado di difficoltà delle sterrate.
-   Per la zona inquadrata scarica da OpenStreetMap (Overpass) le sterrate con il loro grado
-   (tracktype, oppure smoothness quando manca), le salva sul telefono (IndexedDB, valide 30 giorni)
-   e le disegna sopra la mappa: verde scuro = asfaltata/compatta … rosso = pessima.
+   Nord-Ovest (Piemonte, Valle d'Aosta, Liguria, Lombardia): i dati sono preparati da noi dall'estratto
+   OpenStreetMap (tools/estrai-difficolta.py) e stanno nel sito in grade/<x>/<y>.json.
+   Fuori da quella zona prova i server Overpass, che però sono spesso lenti o bloccati.
+   Tutto viene salvato sul telefono (IndexedDB, 30 giorni) e disegnato sopra la mappa:
+   verde scuro = asfaltata/compatta … rosso = pessima.
    La mappa si divide in quadrati di ~10 km (tasselli z12): ogni quadrato si scarica una volta sola. */
 (function () {
   const Z = 12, TTL = 30 * 864e5, MAX_VIEW = 8;
@@ -25,7 +27,7 @@
   function db() {
     if (dbp) return dbp;
     dbp = new Promise((res, rej) => {
-      const r = indexedDB.open('edt-difficolta', 1);
+      const r = indexedDB.open('edt-difficolta-v2', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('t');
       r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
     }).catch(() => null);
@@ -41,14 +43,24 @@
     if (tags.smoothness && SMOOTH[tags.smoothness]) return SMOOTH[tags.smoothness];
     return 0;
   }
+  // elenco dei quadrati preparati da noi
+  let index = null;
+  const indexP = fetch('grade/index.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { index = new Set(j.tiles); }).catch(() => { index = new Set(); });
   async function download(key) {
+    await indexP;
+    if (index.has(key)) {
+      const r = await fetch('grade/' + key + '.json');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return (await r.json()).features;
+    }
     const [x, y] = key.split('/').map(Number);
     const s = y2lat(y + 1), n = y2lat(y), w = x2lon(x), e = x2lon(x + 1);
     const q = `[out:json][timeout:25];way["highway"="track"](${s},${w},${n},${e});out tags geom;`;
     let lastErr;
     for (const url of SERVERS) {
       try {
-        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 15000);
+        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ac.signal }).finally(() => clearTimeout(to));
         if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
         const j = await r.json();
         const feats = [];

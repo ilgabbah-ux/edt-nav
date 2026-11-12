@@ -1,5 +1,5 @@
 // EDT Nav: app sempre disponibile offline + mappe già viste salvate sul telefono
-const APP = 'edt-nav-app-v7';
+const APP = 'edt-nav-app-v8';
 const TILES = 'edt-nav-tiles-v1';
 const MAX_TILES = 8000; // mappe vettoriali e rilievo: qualche centinaio di MB al massimo
 const SHELL = ['./', './index.html', './mappa.js', './difficolta.js', './manifest.json', './icon.svg',
@@ -13,7 +13,7 @@ self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('edt-nav-app') && k !== APP).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 
 // tasselli mappa: cache prima, poi rete (funzionano anche senza campo una volta visti)
-const isTile = u => /openfreemap\.org\/planet\/.+\.pbf|openfreemap\.org\/fonts|elevation-tiles-prod|opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|tile-cyclosm|waymarkedtrails/.test(u);
+const isTile = u => /edt-nav\/grade\/|openfreemap\.org\/planet\/.+\.pbf|openfreemap\.org\/fonts|elevation-tiles-prod|opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|tile-cyclosm|waymarkedtrails/.test(u);
 
 async function trim() {
   const c = await caches.open(TILES);
