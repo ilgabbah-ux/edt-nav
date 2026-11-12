@@ -380,6 +380,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     Carica GPX
   </button>
   <button class="wide-btn" id="readyOpen" style="margin-top:8px;border-color:var(--yellow);color:var(--yellow)">✅ Pronto per il giro?</button>
+  <button class="wide-btn" id="archOpen" style="margin-top:8px">🗂️ Archivio tracce EDT</button>
   <button class="wide-btn" id="routeOpen" style="margin-top:8px">🧭 Naviga verso…</button>
   <button class="wide-btn" id="posShare" style="margin-top:8px">📍 Manda la mia posizione (WhatsApp…)</button>
   <button class="wide-btn" id="zoneDl" style="margin-top:8px">📥 Scarica la zona del giro (per quando non c'è campo)</button>
@@ -446,6 +447,13 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div class="row"><div class="t">Spessore</div><input type="range" id="recW" min="2" max="14" step="1"></div>
 </section>
 
+<section class="sheet" id="archSheet" aria-label="Archivio tracce">
+  <div class="sheet-h"><h2>Archivio <em>tracce</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <div class="form" style="grid-template-columns:1fr" id="archKeyBox"><label>Codice archivio<input id="archKey" type="password" autocomplete="off" placeholder="Te lo dà il Gabbah"></label></div>
+  <input id="archQ" type="search" placeholder="Cerca per nome o zona…" autocomplete="off" style="font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;min-height:50px;padding:0 12px;width:100%;margin-top:8px">
+  <p class="hint" id="archInfo"></p>
+  <div class="list" id="archList"></div>
+</section>
 <section class="sheet" id="rideSheet" aria-label="Riepilogo del giro">
   <div class="sheet-h"><h2>Il tuo <em>giro</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <img id="rideImg" alt="Riepilogo del giro" style="width:100%;border-radius:12px;border:2px solid var(--line)">
@@ -1481,6 +1489,27 @@ $('phOpen').onclick=()=>{const G=$('phGrid');G.innerHTML=photos.length?'':'<div 
   photos.slice().reverse().forEach(p=>{const im=document.createElement('img');im.src=p.th;im.onclick=()=>{closeSheet();if(p.lat!=null)map.easeTo({center:[p.lon,p.lat],zoom:16});setTimeout(()=>phOpen(p),500)};G.appendChild(im)});showSheet('photoSheet')};
 $('phShareAll').onclick=async()=>{const d0=new Date();d0.setHours(0,0,0,0);const fs=[];for(const p of photos.filter(x=>x.t>=d0)){const b=await idbGet('ph_'+p.id);if(b)fs.push(new File([b],'EDT-'+p.id+'.jpg',{type:'image/jpeg'}))}
   if(!fs.length){toast('Nessuna foto oggi');return}try{if(navigator.canShare&&navigator.canShare({files:fs}))await navigator.share({files:fs,title:'Foto del giro EDT'});else toast('Il telefono non permette di condividerle tutte insieme',2500)}catch(e){}};
+/* ---------- archivio tracce EDT su Drive (con codice) ---------- */
+let arch=store.get('edt_arch',null),archQT=null;
+function archRender(){const L=$('archList'),q=norm($('archQ').value.trim());L.innerHTML='';
+  if(!arch){$('archInfo').textContent=bkKey()?'Carico l\'archivio…':'Scrivi il codice archivio per vedere le tracce.';return}
+  const f=arch.files.filter(x=>!q||norm(x.path+x.name).includes(q)).sort((a,b)=>(a.path+a.name).localeCompare(b.path+b.name,'it'));
+  $('archInfo').textContent=`${arch.files.length} tracce${q?' · '+f.length+' trovate':''} · tocca una traccia per caricarla`;
+  f.slice(0,150).forEach(x=>{const d=document.createElement('button');d.className='item';d.style.cssText='grid-template-columns:1fr auto;text-align:left;width:100%';
+    d.innerHTML=`<div style="min-width:0"><div class="name">${esc(x.name.replace(/\.gpx$/i,''))}</div><div class="meta">${esc(x.path||'tracks/')}${x.size?' · '+Math.round(x.size/1024)+' KB':''}</div></div><span class="mini">Carica</span>`;
+    d.onclick=()=>archGet(x);L.appendChild(d)});
+  if(f.length>150)L.insertAdjacentHTML('beforeend','<div class="empty">Altre '+(f.length-150)+' tracce: affina la ricerca</div>')}
+async function archLoad(){if(!bkKey())return archRender();if(!navigator.onLine){archRender();return}
+  try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'xlist',key:bkKey()}),{cache:'no-store'})).json();
+    if(!j.ok){$('archInfo').textContent='Codice archivio sbagliato';arch=null;$('archList').innerHTML='';return}
+    arch={files:j.files,t:Date.now()};store.set('edt_arch',arch)}catch(e){if(!arch)$('archInfo').textContent='Archivio non raggiungibile: serve la rete'}
+  archRender()}
+async function archGet(x){toast('Scarico «'+x.name.replace(/\.gpx$/i,'')+'»…',2000);
+  try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'xget',key:bkKey(),id:x.id}),{cache:'no-store'})).json();if(!j.ok)throw 0;
+    closeSheet();await loadFiles([new File([j.text],x.name.replace(/\.gpx$/i,'')+'.gpx',{type:'application/gpx+xml'})])}catch(e){toast('Traccia non scaricata: riprova',2500)}}
+$('archOpen').onclick=()=>{$('archKey').value=bkKey();showSheet('archSheet');archRender();archLoad()};
+$('archKey').addEventListener('change',()=>{store.set('edt_bkkey',$('archKey').value.trim());$('bkKey').value=bkKey();arch=null;archLoad()});
+$('archQ').oninput=()=>{clearTimeout(archQT);archQT=setTimeout(archRender,200)};
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
