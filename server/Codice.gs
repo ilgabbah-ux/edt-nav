@@ -198,3 +198,6 @@ function statsGet(p) {
   var day = Utilities.formatDate(now, 'Europe/Rome', 'yyyy-MM-dd'), y = String(now.getFullYear());
   return { ok: true, day: st.day === day ? st.rides : [], season: (st.season || {})[y] || {}, year: now.getFullYear() };
 }
+
+// Da eseguire una volta dall'editor: chiede il permesso di scrivere su Drive (classifica e backup dei giri)
+function autorizzaDrive() { var f = DriveApp.getFolderById(TRACKS_ROOT).createFolder('prova-permesso-EDT-Nav'); f.setTrashed(true); Logger.log('Permesso Drive ok'); }
