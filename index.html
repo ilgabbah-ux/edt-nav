@@ -219,7 +219,12 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 .ready .item{grid-template-columns:28px 1fr auto}
 .ready .ic{font-size:20px;text-align:center}
 .ready .mini.fix{border-color:var(--yellow);color:var(--yellow)}
-#qmOpts button{margin:0;min-height:54px}
+#qmOpts button,#poiOpts button{margin:0;min-height:54px}
+.poi{font-size:22px;line-height:1;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#fff;border:3px solid #111;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+.poi.dng{background:#ffd21f;border-color:#e3261b}
+.maplibregl-popup-content{background:var(--panel);color:var(--fg);border:2px solid var(--yellow);border-radius:12px;font-weight:700;padding:10px 12px}
+.maplibregl-popup-tip{display:none}
+.maplibregl-popup-content button{margin-top:8px;font:inherit;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
 #zoneDl.busy{border-color:var(--yellow);color:var(--yellow)}
 #alerts{display:flex;flex-direction:column;gap:6px;margin-top:6px;pointer-events:auto}
 .alert{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-radius:10px;padding:8px 10px;
@@ -317,6 +322,20 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <button class="wide-btn" data-m="BIRRA">🍺 Birra!</button>
     <button class="wide-btn" data-m="OK">👍 Tutto ok</button>
   </div>
+  <h3>Segnala sulla traccia (dove sei adesso)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="poiOpts">
+    <button class="wide-btn" data-p="guado">🌊 Guado</button>
+    <button class="wide-btn" data-p="fango">🟤 Fango</button>
+    <button class="wide-btn" data-p="buca">🕳️ Buca</button>
+    <button class="wide-btn" data-p="ramo">🌳 Albero</button>
+    <button class="wide-btn" data-p="animali">🐄 Animali</button>
+    <button class="wide-btn" data-p="pericolo">⚠️ Pericolo</button>
+    <button class="wide-btn" data-p="bivio">↩️ Bivio sbagliato</button>
+    <button class="wide-btn" data-p="panorama">📸 Panorama</button>
+    <button class="wide-btn" data-p="fontana">🚰 Fontana</button>
+    <button class="wide-btn" data-p="mangiare">🍝 Mangiare</button>
+  </div>
+  <p class="hint">I pericoli avvisano chi arriva dietro 200 m prima. Tutti i punti restano anche nella traccia.</p>
   <h3>Imprevisto</h3>
   <p class="hint" style="margin-top:0">Il gruppo vede il tuo pallino rosso con il motivo e riceve un avviso.</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="sosOpts">
@@ -529,11 +548,14 @@ map.on('style.load',()=>{
   map.addSource('rec',{type:'geojson',data:EMPTY});
   map.addSource('trails',{type:'geojson',data:EMPTY});
   map.addSource('fuel',{type:'geojson',data:EMPTY});
+  map.addSource('lead',{type:'geojson',data:EMPTY});
   // grado di difficoltà delle sterrate (sopra la mappa, sotto le tracce)
   map.addSource('grade',{type:'geojson',data:EMPTY,maxzoom:15,tolerance:.6,buffer:32});
   map.addLayer({id:'grade-case',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1e1408','line-width':['interpolate',['exponential',1.5],['zoom'],11,2.2,14,4.4,18,10]}});
   map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-opacity':['case',['has','s'],.75,1],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
   // dove sono passati gli amici mentre erano senza campo (arriva quando ritrovano il segnale)
+  map.addLayer({id:'lead-case',type:'line',source:'lead',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#111','line-width':7,'line-opacity':.55}});
+  map.addLayer({id:'lead',type:'line',source:'lead',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#00e5ff','line-width':4,'line-dasharray':[2,1.2]}});
   map.addLayer({id:'trail-case',type:'line',source:'trails',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#111','line-width':6,'line-opacity':.6}});
   map.addLayer({id:'trail',type:'line',source:'trails',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['case',['get','sos'],'#e3261b','#ffd21f'],'line-width':3,'line-dasharray':[1.5,1.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
@@ -549,7 +571,7 @@ map.on('style.load',()=>{
   if(!map.getSource('dem3d'))map.addSource('dem3d',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14});
   applyTerrain();
   mapReady=true;
-  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails();if(typeof drawFuel==='function')drawFuel()}
+  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails();if(typeof drawFuel==='function')drawFuel();if(typeof drawLead==='function')drawLead()}
 });
 function applyTerrain(){try{map.setTerrain(S.terrain&&!S.saver&&map.getSource('dem3d')?{source:'dem3d',exaggeration:1.3}:null)}catch(e){}}
 function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
@@ -781,7 +803,7 @@ function onPos(p){
   }
   lastKmh=kmh;
   if(follow){const z=autoZoom(kmh);if(z)zoomGoal=z;if(!raf)raf=requestAnimationFrame(frame)}
-  updateNav();renderStats();
+  updateNav();renderStats();if(poiList.length)poiCheck();
 }
 
 /* ---------- navigazione sulla traccia ---------- */
@@ -863,9 +885,10 @@ function renderLists(){
   gl.innerHTML=gpx.length?'':'<div class="empty">Nessuna traccia. Carica il GPX del giro da seguire.</div>';
   gpx.forEach(t=>{
     const d=document.createElement('div');d.className='item';
-    d.innerHTML=`<div class="sw" style="background:${t.color}"></div><div style="min-width:0"><div class="name">${esc(t.name)}</div><div class="meta">${km(trackLen(t.pts))}${t.wpts.length?' · '+t.wpts.length+' punti':''}</div></div>
-      <div class="acts"><button class="mini ${t.id===active?'on':''}" data-a="nav">${t.id===active?'Attiva':'Segui'}</button><button class="mini ${t.vis?'on':''}" data-a="vis">${t.vis?'👁':'—'}</button><button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
+    d.innerHTML=`<div class="sw" style="background:${t.color}"></div><div style="min-width:0"><div class="name">${esc(t.name)}</div><div class="meta">${km(trackLen(t.pts))}${t.wpts.length?' · '+t.wpts.length+' punti':''}${t.from?' · da '+esc(t.from):''}</div></div>
+      <div class="acts"><button class="mini ${t.id===active?'on':''}" data-a="nav">${t.id===active?'Attiva':'Segui'}</button><button class="mini ${t.vis?'on':''}" data-a="vis">${t.vis?'👁':'—'}</button>${t.id!=='route'?'<button class="mini" data-a="share" aria-label="Manda al gruppo">📤</button>':''}<button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
     d.onclick=e=>{const a=e.target.closest('button')?.dataset.a;if(!a){fitTo(t);closeSheet();return}
+      if(a==='share'){shareTrack(t);return}
       if(a==='edit'){openEdit(t,'gpx');return}
       if(a==='nav'){if(active===t.id){active=null;toast('Navigazione spenta',1200)}else{active=t.id;t.vis=true;fitTo(t);closeSheet();fuelLoad(t,false)}}
       if(a==='vis'){t.vis=!t.vis;if(!t.vis&&active===t.id)active=null;if(t.vis)fuelLoad(t,true)}
@@ -926,7 +949,7 @@ const SERVER='https://script.google.com/macros/s/AKfycbw1aFw-TNfK9Mvw0yMtMcV9vzc
 const crew=Object.assign({id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),name:'',no:'',group:'EDT',gap:5000},store.get('edt_crew',{}));
 if(!store.get('edt_crew_v2',false)){if(crew.gap>0&&crew.gap<5000)crew.gap=5000;store.set('edt_crew_v2',true)}
 store.set('edt_crew',crew);
-let sosR=store.get('edt_sos_r','FERMO'),pendMsg=null,pendRv=null,rally=null,rallySeen=store.get('edt_rally_seen',0),rallyMk=null,lastAcc=null;const msgSeen={};let sharing=store.get('edt_share',false),sos=store.get('edt_sos',false),pinging=false,lastPing=0,netFail=0;
+let pendPoi=[],pendDel=null;let sosR=store.get('edt_sos_r','FERMO'),pendMsg=null,pendRv=null,rally=null,rallySeen=store.get('edt_rally_seen',0),rallyMk=null,lastAcc=null;const msgSeen={};let sharing=store.get('edt_share',false),sos=store.get('edt_sos',false),pinging=false,lastPing=0,netFail=0;
 const riders={};      // id -> {d, mk}
 const behindSent={},silentSent={},sosSeen={};
 $('fRole').value=crew.role||'';$('fName').value=crew.name;$('fNo').value=crew.no;$('fGroup').value=crew.group;$('fGap').value=String(crew.gap);
@@ -1035,7 +1058,7 @@ async function ping(force){
   if(!navigator.onLine){netFail=Math.max(netFail,2);trailAdd();netUI();return}
   pinging=true;lastPing=Date.now();
   const q=new URLSearchParams({a:'ping',id:crew.id,g:crew.group,n:crew.name,no:crew.no,sos:sos?'1':'0',r:sos?sosR:'',ro:crew.role||''});
-  const sm=pendMsg,sv=pendRv;if(sm)q.set('m',sm);if(sv)q.set('rv',sv==='x'?'x':sv[0].toFixed(5)+','+sv[1].toFixed(5));
+  const sm=pendMsg,sv=pendRv,sp=pendPoi.shift(),sd=pendDel;if(sp)q.set('poi',sp);if(sd)q.set('delpoi',sd);if(sm)q.set('m',sm);if(sv)q.set('rv',sv==='x'?'x':sv[0].toFixed(5)+','+sv[1].toFixed(5));
   if(me){q.set('lat',me[0].toFixed(6));q.set('lon',me[1].toFixed(6));if(heading!=null)q.set('h',Math.round(heading));q.set('s',st.speed||0)}
   const sent=trail.length;if(sent)q.set('tr',trailParam());
   try{
@@ -1044,9 +1067,10 @@ async function ping(force){
     const j=await r.json();
     if(!j.ok)throw new Error(j.error);
     if(sent){trail=trail.slice(sent);store.set('edt_trail',trail)}
-    if(sm&&pendMsg===sm)pendMsg=null;if(sv&&pendRv===sv)pendRv=null;
+    if(sm&&pendMsg===sm)pendMsg=null;if(sv&&pendRv===sv)pendRv=null;if(sd&&pendDel===sd)pendDel=null;
+    setPoi(j.poi||[]);leadSync(j.lead);if(j.trk)getTrack(j.trk);if(pendPoi.length)setTimeout(()=>ping(true),300);
     netFail=0;netUI();setRally(j.rv||null);updateRiders((j.riders||[]).map(d=>{if(d.m&&d.m.t)d.mAgo=Math.round(((j.now||Date.now())-d.m.t)/1000);return d}));
-  }catch(e){netFail++;trailAdd();netUI()}
+  }catch(e){if(sp)pendPoi.unshift(sp);netFail++;trailAdd();netUI()}
   finally{pinging=false}
 }
 function drawTrails(){
@@ -1118,18 +1142,19 @@ function checkAlerts(){
 const dismissed={};
 function setAlerts(){
   const box=$('alerts');box.innerHTML='';
-  const fa=fuelAlert(),la=lockAlert();(la?[la]:[]).concat(fa?[fa]:[],alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
+  const fa=fuelAlert(),la=lockAlert(),ta=trkNew?{id:'_trk',trk:1,txt:`📥 ${trkNew.by||'Il gruppo'} ha mandato la traccia «${trkNew.name}»`}:null;(ta?[ta]:[]).concat(la?[la]:[],fa?[fa]:[],alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
     const el=document.createElement('div');el.className='alert'+(a.sos?' sos':'');
-    el.innerHTML=a.lock?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="x">OK</button></div>`:a.fuel?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="fgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Distributore</button><button data-a="full">Pieno fatto</button><button data-a="x">OK</button></div>`:a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
+    el.innerHTML=a.trk?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="tgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Segui</button><button data-a="x">OK</button></div>`:a.lock?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="x">OK</button></div>`:a.fuel?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="fgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Distributore</button><button data-a="full">Pieno fatto</button><button data-a="x">OK</button></div>`:a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
       :`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px">${a.sos?'<button data-a="reach" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Raggiungi</button>':''}<button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
     el.onclick=e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.a==='reach'){reach(a.id);return}
       if(b.dataset.a==='rgo'&&rally){goRally();return}
       if(b.dataset.a==='fgo'){fuelNearest();return}
+      if(b.dataset.a==='tgo'&&trkNew){const t=gpx.find(x=>x.id===trkNew.id);if(t){active=t.id;t.vis=true;saveGpx();gpx.forEach(drawGpx);updateNav();fitTo(t)}trkNew=null;setAlerts();return}
       if(b.dataset.a==='full'){fuelReset();return}
       if(b.dataset.a==='rx'){pendRv='x';setRally(null);ping(true);toast('Ritrovo tolto per tutto il gruppo');return}
       if(b.dataset.a==='go'&&riders[a.id]){const d=riders[a.id].d;setFollow(false);const pp=[[d.lat,d.lon]];if(me)pp.push(me);fitPts(pp,16)}
-      if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;if(a.lock)lockAlertTxt=null;setAlerts()}};
+      if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;if(a.lock)lockAlertTxt=null;if(a.trk)trkNew=null;setAlerts()}};
     box.appendChild(el);
   });
 }
@@ -1232,6 +1257,72 @@ window.addEventListener('online',()=>setTimeout(()=>backupNow(true),3000));
 setTimeout(async()=>{const ts=gpx.filter(t=>t.vis&&t.id!=='route'&&t.pts.length>1&&!t.fuel);for(const t of ts)await fuelLoad(t,t.id!==active)},3500);
 window.addEventListener('online',()=>gpx.filter(t=>t.vis&&t.id!=='route'&&t.pts.length>1&&!t.fuel).forEach(t=>fuelLoad(t,true)));
 setTimeout(()=>backupNow(true),15000);
+/* ---------- traccia mandata a tutto il gruppo ---------- */
+let trkGot=store.get('edt_trk_got',''),trkBusy=false,trkNew=null;
+// semplifico la traccia (Douglas-Peucker) per farla stare nel servizio del gruppo
+function rdp(pts,tol){if(pts.length<3)return pts.slice();const k=Math.cos(rad(pts[0][0])),M=111320,keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;const st=[[0,pts.length-1]];
+  while(st.length){const [a,b]=st.pop();const ax=pts[a][1]*k*M,ay=pts[a][0]*M,bx=pts[b][1]*k*M,by=pts[b][0]*M,dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy)||1e-9;let md=-1,mi=-1;
+    for(let i=a+1;i<b;i++){const d=Math.abs(dy*(pts[i][1]*k*M-ax)-dx*(pts[i][0]*M-ay))/L;if(d>md){md=d;mi=i}}if(md>tol){keep[mi]=1;st.push([a,mi],[mi,b])}}
+  return pts.filter((p,i)=>keep[i])}
+async function shareTrack(t){
+  if(!sharing||!crew.name){toast('Prima attiva la condivisione nel Gruppo',2500);return}
+  if(!navigator.onLine){toast('Serve la rete per mandarla',2500);return}
+  let tol=2,sp=rdp(t.pts,tol);while(sp.length>4500){tol*=1.6;sp=rdp(t.pts,tol)}
+  const pts=sp.map(q=>q[0].toFixed(5)+','+q[1].toFixed(5)+(q[2]!=null?','+Math.round(q[2]):'')).join(';');
+  const w=(t.wpts||[]).map(x=>x.lat.toFixed(5)+','+x.lon.toFixed(5)+','+String(x.name||'').replace(/[|;]/g,' ')).join('|');
+  toast('📤 Mando la traccia al gruppo…',3000);
+  try{const r=await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'tset',g:crew.group,n:crew.name,name:t.name,pts,w})});const j=await r.json();
+    if(j.ok){trkGot=j.trk.id;store.set('edt_trk_got',trkGot);toast('📤 «'+t.name+'» mandata a tutto il gruppo '+crew.group,3000)}else toast('Invio non riuscito, riprova',3000)}
+  catch(e){toast('Invio non riuscito: serve la rete',3000)}}
+async function getTrack(meta){
+  if(trkBusy||!meta||meta.id===trkGot)return;trkBusy=true;
+  try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'tget',g:crew.group}),{cache:'no-store'})).json();
+    if(j.ok){const id='grp'+j.trk.id;
+      if(!gpx.find(x=>x.id===id)){
+        const pts=j.pts.split(';').filter(Boolean).map(x=>{const a=x.split(',').map(Number);return [a[0],a[1],a.length>2?a[2]:null]});
+        const wpts=(j.w||'').split('|').filter(Boolean).map(x=>{const a=x.split(',');return {lat:+a[0],lon:+a[1],name:a.slice(2).join(',')}});
+        const t={id,name:j.trk.name,pts,wpts,color:'#2fb8ff',width:6,op:100,vis:true,from:j.trk.by};
+        gpx.unshift(t);if(!active||!gpx.find(x=>x.id===active))active=id;saveGpx();gpx.forEach(drawGpx);renderLists();updateNav();
+        trkNew={id,name:t.name,by:j.trk.by};buzz([150,80,150]);setAlerts();fuelLoad(t,true);setTimeout(()=>downloadZone(t,true),2500)}
+      trkGot=j.trk.id;store.set('edt_trk_got',trkGot)}}
+  catch(e){}trkBusy=false}
+/* ---------- la strada dell'apripista ---------- */
+let lead={by:'',n:0,pts:[]},leadAt=0;
+function drawLead(){if(!mapReady||!map.getSource('lead'))return;const c=lead.pts.map(p=>[p[1],p[0]]);
+  map.getSource('lead').setData(c.length>1&&!(crew.role==='A'&&lead.by===crew.name)?{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:c}}:EMPTY)}
+async function leadSync(info){
+  if(!info){if(lead.pts.length){lead={by:'',n:0,pts:[]};drawLead()}return}
+  if(info.by!==lead.by)lead={by:info.by,n:0,pts:[]};
+  if(info.n<=lead.n||(lead.n&&Date.now()-leadAt<45000))return;leadAt=Date.now();
+  try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'lead',g:crew.group,from:lead.n}),{cache:'no-store'})).json();
+    if(j.ok&&j.by===lead.by){lead.pts=lead.pts.concat(j.pts);if(lead.pts.length>3000)lead.pts=lead.pts.slice(-3000);lead.n=j.from+j.pts.length;drawLead()}}catch(e){}}
+/* ---------- pericoli e punti segnalati sulla traccia ---------- */
+const POI={guado:['🌊','Guado',1],fango:['🟤','Fango',1],buca:['🕳️','Buca',1],ramo:['🌳','Albero caduto',1],animali:['🐄','Animali',1],pericolo:['⚠️','Pericolo',1],bivio:['↩️','Bivio sbagliato',1],panorama:['📸','Panorama',0],fontana:['🚰','Fontana',0],mangiare:['🍝','Mangiare',0]};
+let poiList=[];const poiMk={},poiWarned={},poiSaved=new Set(store.get('edt_poi_saved',[]));
+function poiToTrack(p){const t=gpx.find(x=>x.id===active&&x.pts.length>1);if(!t||poiSaved.has(p.id))return;poiSaved.add(p.id);store.set('edt_poi_saved',[...poiSaved].slice(-300));
+  if(nearest(t,[p.lat,p.lon]).d>400)return;t.wpts.push({lat:p.lat,lon:p.lon,name:POI[p.k][1]+(p.by?' ('+p.by+')':'')});saveGpx();drawGpx()}
+function setPoi(list){
+  poiList=list.filter(p=>POI[p.k]);const ids=new Set(poiList.map(p=>p.id));
+  for(const id in poiMk)if(!ids.has(id)){poiMk[id].remove();delete poiMk[id]}
+  poiList.forEach(p=>{if(poiMk[p.id])return;const el=document.createElement('div');el.className='poi'+(POI[p.k][2]?' dng':'');el.textContent=POI[p.k][0];
+    el.onclick=ev=>{ev.stopPropagation();const box=document.createElement('div');const mins=Math.max(0,Math.round((Date.now()-p.t)/60000));
+      box.innerHTML=`${POI[p.k][0]} ${POI[p.k][1]}<br><small>da ${esc(p.by||'?')} · ${mins<1?'adesso':mins+' min fa'}${me?' · '+km(hav(me,[p.lat,p.lon])):''}</small><br><button>Togli dalla mappa</button>`;
+      const pop=new maplibregl.Popup({closeButton:false,offset:18}).setLngLat([p.lon,p.lat]).setDOMContent(box).addTo(map);
+      box.querySelector('button').onclick=()=>{pendDel=p.id;pop.remove();poiMk[p.id]&&poiMk[p.id].remove();delete poiMk[p.id];ping(true);toast('Tolto per tutto il gruppo',1800)}};
+    poiMk[p.id]=new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).addTo(map);poiToTrack(p)});
+}
+let poiCheckAt=0;
+function poiCheck(){if(!me||Date.now()-poiCheckAt<2500)return;poiCheckAt=Date.now();
+  const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1),here=t?nearest(t,me):null;
+  poiList.forEach(p=>{if(!POI[p.k][2]||poiWarned[p.id]||p.by===crew.name)return;const d=hav(me,[p.lat,p.lon]);if(d>250)return;
+    if(here&&here.d<300){const q=nearest(t,[p.lat,p.lon]);if(q.d<300&&q.along<here.along-15)return}
+    poiWarned[p.id]=1;const dd=Math.max(10,Math.round(d/10)*10);buzz([300,120,300,120,300]);
+    toast(`${POI[p.k][0]} ${POI[p.k][1]} tra ${dd} m${p.by?' · segnalato da '+p.by:''}`,4000);say('Attenzione, '+POI[p.k][1].toLowerCase()+' tra '+sayDist(dd))})}
+$('poiOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.p;
+  if(!me){toast('Aspetto il tuo GPS…');startGPS();return}
+  const fake={id:'l'+Date.now(),k,lat:+me[0].toFixed(5),lon:+me[1].toFixed(5),by:crew.name,t:Date.now()};poiToTrack(fake);
+  if(sharing){pendPoi.push(k+','+fake.lat+','+fake.lon);ping(true);toast(POI[k][0]+' '+POI[k][1]+' segnalato al gruppo',2200)}else toast(POI[k][0]+' '+POI[k][1]+' salvato nella traccia (attiva il Gruppo per avvisare gli altri)',3000);
+  closeSheet()};
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
