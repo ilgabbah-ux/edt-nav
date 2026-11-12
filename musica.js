@@ -10,7 +10,7 @@
     ['lenduro-non-e-reato', "L'enduro non è reato"], ['gas-a-martello', 'Gas a martello'], ['salita-infame', 'Salita infame'],
     ['supereroi-contro-le-gev', 'Supereroi contro le GEV'], ['same-blood', 'Same Blood'], ['hell-can-wait', 'Hell Can Wait'],
     ['suka-suka', 'SUKA SUKA'], ['vai-ciccio', 'Vai Ciccio'], ['brindisi-easy', 'Brindisi Easy'], ['gusta-ranch', 'Gusta Ranch'],
-    ['orto-bio', 'Orto Bio'], ['leventino-2026', 'Leventino 2026'], ['mirco-e-gabbah-fest-v2', 'Mirco e Gabbah Fest'],
+    ['leventino-2026', 'Leventino 2026'], ['mirco-e-gabbah-fest-v2', 'Mirco e Gabbah Fest'],
     ['angelo-potter', 'Angelo Potter'], ['angelo-vs-gabbah', 'Angelo vs Gabbah'], ['costa-vs-linus', 'Costa vs Linus'],
     ['sergione-vs-renard', 'Sergione vs Renard'], ['christmas-madness', 'Christmas Madness'], ['ethereal-hammer', 'Ethereal Hammer'],
     ['fango-senza-pieta', 'Fango senza pietà'], 
