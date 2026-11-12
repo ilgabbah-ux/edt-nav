@@ -289,6 +289,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Nomi e strade sul satellite</div><button class="tog" id="sLabels" aria-label="Nomi sul satellite"></button></div>
   <h3>Guida</h3>
   <div class="row"><div class="t">Orientamento</div><div class="seg" id="sOrient"><button data-v="north">Nord su</button><button data-v="heading">Direzione</button></div></div>
+  <div class="row"><div class="t">Come seguire le tracce<small>Segui: vedi solo dove sei sulla linea · Naviga: indicazioni di svolta</small></div><div class="seg" id="sTrackMode"><button data-v="segui">Segui</button><button data-v="naviga">Naviga</button></div></div>
+  <div class="row"><div class="t">Voce per le svolte<small>"Tra 200 metri a destra" (in modalità Naviga)</small></div><button class="tog" id="sVoice" aria-label="Voce"></button></div>
   <div class="row"><div class="t">Mappa inclinata in movimento<small>Vista 3D come i navigatori quando vai</small></div><button class="tog" id="sTilt" aria-label="Mappa inclinata"></button></div>
   <div class="row"><div class="t">Montagne in 3D<small>Rilievo vero in rilievo (consuma più batteria)</small></div><button class="tog" id="sTerrain" aria-label="Montagne in 3D"></button></div>
   <div class="row"><div class="t">Zoom automatico<small>Vicino da fermo, più largo quando vai forte</small></div><button class="tog" id="sAutoZoom" aria-label="Zoom automatico"></button></div>
@@ -360,7 +362,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -468,7 +470,7 @@ function refreshGpx(){
   map.getSource('gpxpts')?.setData({type:'FeatureCollection',features:pts});
 }
 let gpxQ=false;function drawGpx(){if(gpxQ)return;gpxQ=true;requestAnimationFrame(()=>{gpxQ=false;refreshGpx()})}
-function saveGpx(){store.set('edt_gpx',gpx.map(({_c,...t})=>t));store.set('edt_active',active)}
+function saveGpx(){gpx.forEach(t=>{if(t._turnsFor!==t.pts){delete t._turns;t._turnsFor=t.pts}});store.set('edt_gpx',gpx.map(({_c,_turns,_turnsFor,_ni,...t})=>t));store.set('edt_active',active)}
 async function loadFiles(files){
   let last=null;
   for(const f of files){
@@ -520,7 +522,7 @@ let resumeT=null,manualZoomAt=0;
 function setFollow(v,dragging){
   if(follow===v&&!v)return;
   follow=v;$('followBtn').classList.toggle('on',v);clearTimeout(resumeT);
-  if(v&&me){userZoomed=false;azBand=null;if(map.getZoom()<13)map.setZoom(15);camera(true)}
+  if(v&&me){userZoomed=false;azBand=null;zoomGoal=null;smoothH=null;if(map.getZoom()<13)map.setZoom(15);camera(true)}
   // mai animare la mappa mentre la stai trascinando: l'animazione "frena" il dito
   if(!v&&!dragging&&(map.getPitch()>0))map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
 }
@@ -530,7 +532,7 @@ map.on('dragend',()=>{if(!follow&&map.getPitch()>0)map.easeTo({pitch:0,padding:{
 map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false,true);armResume()});
 // torna a seguirti solo dopo N secondi SENZA toccare la mappa (prima i timer si accumulavano e la mappa saltava indietro mentre la guardavi)
 function armResume(){clearTimeout(resumeT);if(!(S.resume>0&&me))return;resumeT=setTimeout(function chk(){if(follow)return;const idle=Date.now()-userAt;if(touching||idle<S.resume*1000){resumeT=setTimeout(chk,Math.max(1000,S.resume*1000-idle));return}setFollow(true)},S.resume*1000)}
-map.on('zoomstart',e=>{if(e.originalEvent){manualZoomAt=Date.now();userZoomed=true}});
+map.on('zoomstart',e=>{if(e.originalEvent){manualZoomAt=Date.now();userZoomed=true;zoomGoal=null}});
 // mappa che gira con la direzione di marcia
 function orient(){
   if(!canRotate)return;
@@ -563,19 +565,33 @@ function startGPS(){
     gdot('');
     toast(err.code===1?'Permetti la posizione al browser per usare il GPS':'Segnale GPS assente, riprovo…',3000);
     if(err.code===1){watchId=null}
-  },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+  },{enableHighAccuracy:true,maximumAge:0,timeout:15000});
 }
-// il pallino scivola dalla posizione vecchia alla nuova invece di saltare
-let gFrom=null,gTo=null,gT0=0,gRaf=0;
-function glide(pt){
-  if(!meMk)return;
-  const cur=meMk.getLngLat();gFrom=[cur.lat,cur.lng];gTo=pt;gT0=performance.now();
-  if(!gRaf)gRaf=requestAnimationFrame(gStep);
+// inseguimento GPS stile DMD2: al fix il pallino va ESATTO sulla posizione vera; tra un fix e l'altro
+// proseguo lungo direzione e velocità (previsione), così a 80 km/h non resta indietro e non scatta.
+let fixPt=null,fixT=0,fixV=0,fixH=null,shownPt=null,raf=0,smoothH=null,zoomGoal=null;
+function glide(pt){fixPt=pt;fixT=performance.now();if(!raf)raf=requestAnimationFrame(frame)}
+function predicted(now){
+  if(!fixPt)return null;
+  const dt=Math.min(1.6,(now-fixT)/1000);
+  if(fixV<1.5||fixH==null)return fixPt;                  // fermo o lento: posizione vera, nessuna previsione
+  const d=fixV*dt,h=rad(fixH),la=rad(fixPt[0]);
+  return [fixPt[0]+d*Math.cos(h)/R*180/Math.PI,fixPt[1]+d*Math.sin(h)/(R*Math.cos(la))*180/Math.PI];
 }
-function gStep(t){
-  const k=Math.min(1,(t-gT0)/950),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
-  meMk.setLngLat([gFrom[1]+(gTo[1]-gFrom[1])*e,gFrom[0]+(gTo[0]-gFrom[0])*e]);
-  gRaf=k<1?requestAnimationFrame(gStep):0;
+function frame(now){
+  raf=0;const p=predicted(now);if(!p||!meMk)return;
+  // piccola correzione morbida per non "teletrasportare" il pallino quando arriva il fix nuovo (max 0,25 s)
+  shownPt=shownPt&&hav(shownPt,p)<40?[shownPt[0]+(p[0]-shownPt[0])*.35,shownPt[1]+(p[1]-shownPt[1])*.35]:p;
+  meMk.setLngLat(ll(shownPt));
+  if(follow&&!touching&&Date.now()-userAt>3000&&Date.now()-manualZoomAt>1500&&!map.isZooming()){
+    const want=camBearing();
+    smoothH=smoothH==null?want:smoothH+((((want-smoothH)%360)+540)%360-180)*.12;   // rotazione morbida
+    const moving=lastKmh>4,tilt=S.tilt&&moving,h=map.getContainer().clientHeight;
+    const z=map.getZoom(),zg=zoomGoal==null?z:zoomGoal;
+    map.jumpTo({center:ll(shownPt),bearing:S.orient==='heading'?smoothH:0,pitch:map.getPitch()+((tilt?55:0)-map.getPitch())*.08,
+      padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},zoom:Math.abs(zg-z)>.01?z+(zg-z)*.06:z});
+  }
+  if(fixV>=1.5||(shownPt&&hav(shownPt,fixPt)>.5)||(follow&&Math.abs(map.getPitch()-((S.tilt&&lastKmh>4)?55:0))>.5))raf=requestAnimationFrame(frame);
 }
 // telecamera: inclinata e con il pilota in basso quando ti muovi, piatta da fermo
 let lastKmh=0,touching=false,userAt=0,camPos=null,camTilt=null,camHead=null;
@@ -600,6 +616,7 @@ function onPos(p){
   me=pt;
   if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="pulse"></div><div class="cone"><svg viewBox="0 0 46 46"><path d="M23 3 L40 40 L23 31 L6 40 Z" fill="#ffd21f" stroke="#111" stroke-width="3.5" stroke-linejoin="round"/><path d="M23 11 L23 29" stroke="#e3261b" stroke-width="3.5" stroke-linecap="round"/></svg></div><div class="ring"></div><div class="melbl"></div></div>';
     meMk=new maplibregl.Marker({element:el}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5;map.on('rotate',coneUpdate)}
+  fixV=c.speed!=null&&!isNaN(c.speed)?c.speed:0;fixH=heading;
   glide(pt);
   const kmh=c.speed!=null&&!isNaN(c.speed)?c.speed*3.6:(lastFix?hav(lastFix.pt,pt)/Math.max(1,(p.timestamp-lastFix.t)/1000)*3.6:0);
   st.speed=kmh<1?0:Math.round(kmh);
@@ -615,14 +632,14 @@ function onPos(p){
     }
   }
   lastKmh=kmh;
-  if(follow&&Date.now()-manualZoomAt>1500)camera();
+  if(follow){const z=autoZoom(kmh);if(z)zoomGoal=z;if(!raf)raf=requestAnimationFrame(frame)}
   updateNav();renderStats();
 }
 
 /* ---------- navigazione sulla traccia ---------- */
-function nearest(t,p){
+function nearest(t,p,from,to){
   const c=cumul(t),k=Math.cos(rad(p[0]));let best={d:Infinity,along:0,i:0};
-  for(let i=1;i<t.pts.length;i++){
+  for(let i=Math.max(1,from||1);i<Math.min(t.pts.length,to||t.pts.length);i++){
     const a=t.pts[i-1],b=t.pts[i];
     const ax=(a[1]-p[1])*k,ay=a[0]-p[0],bx=(b[1]-p[1])*k,by=b[0]-p[0];
     const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;let u=L2?-(ax*dx+ay*dy)/L2:0;u=Math.max(0,Math.min(1,u));
@@ -632,6 +649,23 @@ function nearest(t,p){
   return best;
 }
 let wasOff=false,cardSoon=false;
+/* --- modalità Naviga: svolte calcolate dalla forma della traccia --- */
+function buildTurns(t){
+  if(t._turns)return t._turns;
+  const c=cumul(t),tot=c.at(-1),S10=10,rs=[];let j=1;
+  for(let d=0;d<=tot;d+=S10){while(j<t.pts.length-1&&c[j]<d)j++;const a=t.pts[j-1],b=t.pts[j],u=c[j]>c[j-1]?(d-c[j-1])/(c[j]-c[j-1]):0;rs.push([a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u,d])}
+  const raw=[];
+  for(let i=3;i<rs.length-3;i++){const bi=bearing(rs[i-3],rs[i]),bo=bearing(rs[i],rs[i+3]);raw.push({i,along:rs[i][2],diff:((bo-bi+540)%360)-180})}
+  const out=[];let cl=null;
+  for(const r of raw){if(Math.abs(r.diff)>=35){if(cl&&r.along-cl.end<=20){if(Math.abs(r.diff)>Math.abs(cl.best.diff))cl.best=r;cl.end=r.along}else{if(cl)out.push(cl.best);cl={best:r,end:r.along}}}}
+  if(cl)out.push(cl.best);
+  t._turns=out.filter((x,k)=>k===0||x.along-out[k-1].along>=45);
+  return t._turns;
+}
+function turnTxt(d){const a=Math.abs(d),dir=d>0?'destra':'sinistra';return a<60?'leggermente a '+dir:a<130?'a '+dir:a<165?'stretta a '+dir:'inversione a U'}
+let spoken={};
+function say(txt){if(!S.voice||!('speechSynthesis' in window))return;try{const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function sayDist(m){return m>=1000?(m/1000).toFixed(1).replace('.',',')+' chilometri':Math.round(m/10)*10+' metri'}
 // tocco sul riquadro: mostra te e la traccia insieme; la ✕ spegne la navigazione
 $('navbar').onclick=e=>{
   if(e.target.closest('#navOff')){if(active==='route'){$('rcDel').click();return}active=null;saveGpx();drawGpx();updateNav();toast('Navigazione spenta · la riaccendi da Tracce',2200);return}
@@ -645,10 +679,11 @@ function updateNav(){
   nb.classList.add('on');
   const total=cumul(t).at(-1);
   if(!me){$('navtxt').innerHTML=esc(km(total))+' <span>'+esc(t.name)+' · attendo il GPS</span>';$('navpct').textContent='';return}
-  const n=nearest(t,me),left=Math.max(0,total-n.along),far=n.d>1500,off=n.d>S.offRoute&&!far;
+  let n=t._ni?nearest(t,me,t._ni-150,t._ni+500):null;if(!n||n.d>120)n=nearest(t,me);t._ni=n.i;
+  const left=Math.max(0,total-n.along),far=n.d>1500,off=n.d>S.offRoute&&!far;
   st.left=left;
   nb.classList.toggle('off',off);
-  if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}}
+  if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}if(S.trackMode==='naviga')say('Fuori traccia')}
   wasOff=off;maybeReroute(off);
   if(far){const a=t.pts[n.i-1],b=t.pts[n.i],tg=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u],br0=bearing(me,tg);
     $('arrow').style.transform=`rotate(${heading!=null?br0-heading:br0}deg)`;
@@ -657,6 +692,18 @@ function updateNav(){
   if(off){const a=t.pts[n.i-1],b=t.pts[n.i];target=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u]}
   else{let j=n.i;while(j<t.pts.length-1&&cumul(t)[j]-n.along<40)j++;target=t.pts[j]}
   const br=bearing(me,target),rel=heading!=null?br-heading:br;
+  if(!off&&S.trackMode==='naviga'){
+    const turns=buildTurns(t),k=turns.findIndex(x=>x.along>n.along+5),nx=turns[k];
+    if(!nx||nx.along-n.along>3000){$('arrow').style.transform='rotate(0deg)';$('navtxt').innerHTML='Dritto '+esc(km(Math.min(left,nx?nx.along-n.along:left)))+' <span>'+esc(km(left))+' all\'arrivo · '+esc(t.name)+'</span>';$('navpct').textContent=''}
+    else{const dist=nx.along-n.along,after=turns[k+1];
+      $('arrow').style.transform=`rotate(${Math.max(-150,Math.min(150,nx.diff))}deg)`;
+      $('navtxt').innerHTML=esc(km(dist))+' '+esc(turnTxt(nx.diff))+' <span>'+(after&&after.along-nx.along<200?'poi subito '+esc(turnTxt(after.diff))+' · ':'')+esc(km(left))+' all\'arrivo</span>';
+      $('navpct').textContent='';
+      const v=Math.max(lastKmh/3.6,5),far=Math.max(200,v*14),near=Math.max(40,v*4),id=t.id+':'+k;
+      if(dist<=far&&dist>near*1.5&&!spoken[id+'f']){spoken[id+'f']=1;say('Tra '+sayDist(dist)+', '+turnTxt(nx.diff))}
+      if(dist<=near&&!spoken[id+'n']){spoken[id+'n']=1;say(turnTxt(nx.diff)[0].toUpperCase()+turnTxt(nx.diff).slice(1));try{navigator.vibrate&&navigator.vibrate(nx.diff>0?[80,60,80]:[200])}catch(e){}}}
+    if(left<30&&!spoken[t.id+':end']){spoken[t.id+':end']=1;say('Sei arrivato. Tranquilli, era un giro easy')}
+    return}
   $('arrow').style.transform=`rotate(${rel}deg)`;
   $('navtxt').innerHTML=off?'Fuori traccia '+esc(km(n.d))+' <span>Segui la freccia per rientrare</span>':esc(km(left))+' <span>all\'arrivo · '+esc(t.name)+'</span>';
   $('navpct').textContent=off?'':Math.round(n.along/total*100)+'%';
@@ -713,7 +760,7 @@ $('eSw').onclick=e=>{const b=e.target.closest('.swatch');if(b){eCol=b.dataset.c;
 $('eW').oninput=ePreview;$('eOp').oninput=ePreview;
 $('eRev').onclick=()=>{
   if(!editing)return;
-  editing.pts.reverse();delete editing._c;
+  editing.pts.reverse();delete editing._c;delete editing._turns;delete editing._ni;
   const twin=eKind==='rec'?gpx.find(x=>x.id==='v'+editing.id):null;if(twin&&twin.pts!==editing.pts){twin.pts.reverse();delete twin._c}else if(twin)delete twin._c;
   if(eKind==='rec')store.set('edt_recs',recs);saveGpx();gpx.forEach(drawGpx);updateNav();
   toast('Senso invertito: partenza e arrivo scambiati',1600);
@@ -1009,7 +1056,7 @@ function renderBases(){
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
 tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
-tog('sAutoZoom','autoZoom');tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
+tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
