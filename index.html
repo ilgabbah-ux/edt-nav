@@ -40,7 +40,7 @@ html,body{position:fixed;inset:0;width:100%;touch-action:none}
 .stat b{display:block;font-family:var(--display);font-weight:800;font-size:clamp(24px,7.5vw,40px);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat small{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .stat b i{font-style:normal;font-size:.5em;color:var(--muted);margin-left:2px}
-#navbar{pointer-events:auto;cursor:pointer;margin-top:6px;display:none;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;
+#navbar{pointer-events:auto;cursor:pointer;margin-top:6px;display:none;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
 #navbar.on{display:grid}
 #navbar:active{filter:brightness(1.25)}
@@ -227,6 +227,16 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 .ready .ic{font-size:20px;text-align:center}
 .ready .mini.fix{border-color:var(--yellow);color:var(--yellow)}
 #qmOpts button,#poiOpts button{margin:0;min-height:54px}
+.tabs3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 10px}
+.tabs3 button{min-height:62px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--fg);font:800 17px var(--display);text-transform:uppercase;letter-spacing:.3px}
+.tabs3 button.on{border-color:var(--yellow);background:var(--yellow);color:#111}
+.tabs3 button.sos.on{border-color:var(--red);background:var(--red);color:#fff}
+.sostab[hidden]{display:none}
+#navStart{display:none;min-height:40px;padding:0 10px;border-radius:10px;border:2px solid var(--yellow);background:var(--yellow);color:#111;font:800 14px var(--display);white-space:nowrap}
+#navbar.far #navStart{display:block}
+.onb h3{margin-top:4px}.onb .stepn{color:var(--yellow);font:800 14px var(--display);letter-spacing:.5px}
+.onb .perm{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-top:8px}
+.onb .perm small{display:block;color:var(--muted);font-weight:600}.onb .perm.ok{border-color:var(--green)}
 .poi{font-size:22px;line-height:1;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#fff;border:3px solid #111;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 .poi.dng{background:#ffd21f;border-color:#e3261b}
 .maplibregl-popup-content{background:var(--panel);color:var(--fg);border:2px solid var(--yellow);border-radius:12px;font-weight:700;padding:10px 12px}
@@ -275,6 +285,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     <svg id="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l7 19-7-4-7 4z" fill="#ffd21f"/></svg>
     <div id="navtxt">– <span>Carica una traccia GPX</span></div>
     <div id="navpct" style="font-family:var(--display);font-weight:800;font-size:18px;color:var(--muted)"></div>
+    <button id="navStart" aria-label="Portami alla partenza">🧭 Portami</button>
     <button id="navOff" aria-label="Spegni la navigazione">✕</button>
   </div>
   <div id="alerts"></div>
@@ -322,6 +333,8 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <button class="fab left" id="sosBtn">IMPRE-<br>VISTO</button>
 <section class="sheet edit" id="sosSheet" aria-label="Segnala imprevisto">
   <div class="sheet-h"><h2>Segnala <em>imprevisto</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <div class="tabs3" id="sosTabs"><button data-t="msg">💬 Messaggio</button><button data-t="poi">⚠️ Segnala</button><button data-t="sos" class="sos">🆘 Imprevisto</button></div>
+  <div class="sostab" data-t="msg">
   <h3 style="margin-top:0">Messaggio veloce al gruppo</h3>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="qmOpts">
     <button class="wide-btn" data-m="PAUSA">⏸ Pausa</button>
@@ -331,7 +344,9 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     <button class="wide-btn" data-m="BIRRA">🍺 Birra!</button>
     <button class="wide-btn" data-m="OK">👍 Tutto ok</button>
   </div>
-  <h3>Segnala sulla traccia (dove sei adesso)</h3>
+  </div>
+  <div class="sostab" data-t="poi">
+  <h3 style="margin-top:0">Segnala sulla traccia (dove sei adesso)</h3>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="poiOpts">
     <button class="wide-btn" data-p="guado">🌊 Guado</button>
     <button class="wide-btn" data-p="fango">🟤 Fango</button>
@@ -345,7 +360,8 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     <button class="wide-btn" data-p="mangiare">🍝 Mangiare</button>
   </div>
   <p class="hint">I pericoli avvisano chi arriva dietro 200 m prima. Tutti i punti restano anche nella traccia.</p>
-  <h3>Imprevisto</h3>
+  </div>
+  <div class="sostab" data-t="sos">
   <p class="hint" style="margin-top:0">Il gruppo vede il tuo pallino rosso con il motivo e riceve un avviso.</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px" id="sosOpts">
     <button class="wide-btn" data-r="FERMO" style="margin:0;min-height:70px">✋ Sono fermo</button>
@@ -358,6 +374,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <button class="wide-btn" id="sosHelp" style="border-color:var(--red);color:#ff8a80">🆘 Soccorso 112 con le coordinate</button>
   <button class="wide-btn" id="sosShare">📍 Manda posizione e motivo su WhatsApp…</button>
   <button class="wide-btn go" id="sosOk" style="background:var(--green);border-color:var(--green)">✅ Tutto ok, riparto</button>
+  </div>
 </section>
 
 <button class="fab" id="layerBtn" aria-label="Cambia mappa">
@@ -447,6 +464,31 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div class="row"><div class="t">Spessore</div><input type="range" id="recW" min="2" max="14" step="1"></div>
 </section>
 
+<section class="sheet onb" id="onbSheet" aria-label="Benvenuto">
+  <div class="sheet-h"><h2>Benvenuto in <em>EDT Nav</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <div data-s="1">
+    <div class="stepn">1 DI 3 · CHI SEI</div>
+    <p class="hint">Così il gruppo ti riconosce sulla mappa.</p>
+    <div class="form"><label>Nome<input id="oName" maxlength="20" placeholder="Ilgabbah" autocomplete="nickname"></label><label>Numero<input id="oNo" maxlength="4" inputmode="numeric" placeholder="69"></label>
+      <label style="grid-column:1/-1">Codice gruppo<input id="oGroup" maxlength="30" placeholder="EDT"></label></div>
+    <button class="wide-btn go" id="oNext1">Avanti ›</button>
+  </div>
+  <div data-s="2" hidden>
+    <div class="stepn">2 DI 3 · PERMESSI</div>
+    <p class="hint">Tocca ogni riga: il telefono ti chiederà il consenso.</p>
+    <div class="perm" id="oGps"><div>📍 Posizione GPS<small>Per vederti sulla mappa e seguire la traccia</small></div><button class="mini fix">Attiva</button></div>
+    <div class="perm" id="oShare"><div>👥 Gruppo<small>Gli altri ti vedono e ricevi i loro avvisi</small></div><button class="mini fix">Attiva</button></div>
+    <div class="perm" id="oAwake"><div>☀️ Schermo acceso<small>Se il telefono si blocca il gruppo non ti vede</small></div><button class="mini fix">Attiva</button></div>
+    <button class="wide-btn go" id="oNext2">Avanti ›</button>
+  </div>
+  <div data-s="3" hidden>
+    <div class="stepn">3 DI 3 · IL GIRO</div>
+    <p class="hint">Carica il GPX del giro, oppure aspetta: quando chi organizza lo manda al gruppo, ti arriva da solo.</p>
+    <button class="wide-btn" id="oLoad">📂 Carica il GPX del giro</button>
+    <button class="wide-btn go" id="oDone">Fatto, si parte! 🏍️</button>
+    <p class="hint" style="text-align:center">Tranquilli, è un giro easy 😏</p>
+  </div>
+</section>
 <section class="sheet" id="archSheet" aria-label="Archivio tracce">
   <div class="sheet-h"><h2>Archivio <em>tracce</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <div class="form" style="grid-template-columns:1fr" id="archKeyBox"><label>Codice archivio<input id="archKey" type="password" autocomplete="off" placeholder="Te lo dà il Gabbah"></label></div>
@@ -897,14 +939,14 @@ $('navbar').onclick=e=>{
 };
 function updateNav(){
   const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1),nb=$('navbar');
-  if(!t){nb.classList.remove('on');return}
+  if(!t){nb.classList.remove('on','far');return}
   nb.classList.add('on');
   const total=cumul(t).at(-1);
   if(!me){$('navtxt').innerHTML=esc(km(total))+' <span>'+esc(t.name)+' · attendo il GPS</span>';$('navpct').textContent='';return}
   let n=t._ni?nearest(t,me,t._ni-150,t._ni+500):null;if(!n||n.d>120)n=nearest(t,me);t._ni=n.i;
   const left=Math.max(0,total-n.along),far=n.d>1500,off=n.d>S.offRoute&&!far;
   st.left=left;
-  nb.classList.toggle('off',off);
+  nb.classList.toggle('off',off);nb.classList.toggle('far',far);
   if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}if(S.trackMode==='naviga')say('Fuori traccia')}
   wasOff=off;maybeReroute(off);
   if(far){const a=t.pts[n.i-1],b=t.pts[n.i],tg=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u],br0=bearing(me,tg);
@@ -1015,7 +1057,7 @@ $('fRole').value=crew.role||'';$('fName').value=crew.name;$('fNo').value=crew.no
 const ago=s=>s<60?'adesso':s<3600?Math.round(s/60)+' min fa':Math.round(s/3600)+' h fa';
 function clearRiders(){for(const id in riders){riders[id].mk.remove();delete riders[id]}renderCrew();if(typeof drawTrails==='function')drawTrails()}
 function shareUI(){
-  $('shareBtn').classList.toggle('on',sharing);$('sosBtn').classList.toggle('on',sharing);$('sosBtn').classList.toggle('active',sos);
+  $('shareBtn').classList.toggle('on',sharing);$('sosBtn').classList.add('on');$('sosBtn').classList.toggle('active',sos);
   $('sosBtn').innerHTML=sos?'TUTTO<br>OK':'IMPRE-<br>VISTO';$('sosOk').hidden=!sos;
   $('shareToggle').classList.toggle('on',sharing);$('shareToggle').textContent=sharing?'Smetti di condividere':'Condividi la mia posizione';
 }
@@ -1030,7 +1072,9 @@ function setSharing(v){
 $('shareToggle').onclick=()=>setSharing(!sharing);
 $('shareBtn').onclick=()=>{if(!sharing){openSheet();$('fName').scrollIntoView({block:'center'})}else openSheet()};
 let sosArmed=false;
-$('sosBtn').onclick=()=>{if(sos){setSos(false);return}showSheet('sosSheet')};
+function sosTab(t){t=t||store.get('edt_sostab','msg');store.set('edt_sostab',t);$('sosTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.sostab').forEach(d=>d.hidden=d.dataset.t!==t)}
+$('sosTabs').onclick=e=>{const b=e.target.closest('button');if(b)sosTab(b.dataset.t)};
+$('sosBtn').onclick=()=>{if(sos){setSos(false);return}sosTab();showSheet('sosSheet')};
 // condividi la posizione con WhatsApp o altre app (link Google Maps, si apre su qualsiasi telefono)
 const SOSTXT={FERMO:'✋ Sono fermo',ASPETTATEMI:'⏳ Aspettatemi',CADUTA:'💥 Caduta',GUASTO:'🔧 Guasto / foratura',BENZINA:'⛽ Senza benzina',AIUTO:'🆘 Serve aiuto'};
 function getPos(){return new Promise((ok,ko)=>{if(me)return ok(me);if(!navigator.geolocation)return ko();
@@ -1510,6 +1554,32 @@ async function archGet(x){toast('Scarico «'+x.name.replace(/\.gpx$/i,'')+'»…
 $('archOpen').onclick=()=>{$('archKey').value=bkKey();showSheet('archSheet');archRender();archLoad()};
 $('archKey').addEventListener('change',()=>{store.set('edt_bkkey',$('archKey').value.trim());$('bkKey').value=bkKey();arch=null;archLoad()});
 $('archQ').oninput=()=>{clearTimeout(archQT);archQT=setTimeout(archRender,200)};
+/* ---------- primo avvio guidato ---------- */
+function onbStep(n){document.querySelectorAll('#onbSheet [data-s]').forEach(d=>d.hidden=d.dataset.s!=n);onbPaint()}
+function onbPaint(){$('oGps').classList.toggle('ok',!!me);$('oGps').querySelector('button').textContent=me?'✓':'Attiva';
+  $('oShare').classList.toggle('ok',sharing);$('oShare').querySelector('button').textContent=sharing?'✓':'Attiva';
+  $('oAwake').classList.toggle('ok',S.keepAwake===true);$('oAwake').querySelector('button').textContent=S.keepAwake===true?'✓':'Attiva'}
+function onbOpen(){$('oName').value=crew.name||'';$('oNo').value=crew.no||'';$('oGroup').value=crew.group||'EDT';onbStep(1);showSheet('onbSheet')}
+$('oNext1').onclick=()=>{const n=$('oName').value.trim();if(!n){toast('Scrivi il tuo nome',1800);$('oName').focus();return}
+  crew.name=n;crew.no=$('oNo').value.trim();crew.group=$('oGroup').value.trim()||'EDT';store.set('edt_crew',crew);
+  $('fName').value=crew.name;$('fNo').value=crew.no;$('fGroup').value=crew.group;coneUpdate();onbStep(2)};
+$('oGps').onclick=()=>{startGPS();setTimeout(onbPaint,2500);setTimeout(onbPaint,6000)};
+$('oShare').onclick=()=>{if(!sharing){S.keepAwake=S.keepAwake==null?false:S.keepAwake;setSharing(true)}onbPaint()};
+$('oAwake').onclick=()=>{setAwake(true);motionStart();onbPaint()};
+$('oNext2').onclick=()=>onbStep(3);
+$('oLoad').onclick=()=>{store.set('edt_onb',1);$('fileIn').click()};
+$('oDone').onclick=()=>{store.set('edt_onb',1);closeSheet();toast('Buon giro, '+crew.name+'!',2000)};
+if(!store.get('edt_onb',0)&&!crew.name)setTimeout(onbOpen,2600);
+/* ---------- portami alla partenza ---------- */
+$('navStart').onclick=async e=>{e.stopPropagation();const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1);if(!t)return;
+  if(!me){toast('Aspetto il tuo GPS…');startGPS();return}
+  const st0=t.pts[0],n=nearest(t,me),a=t.pts[Math.max(0,n.i-1)];
+  // se l'inizio è molto più lontano del punto più vicino della traccia, entro dal punto più vicino
+  const useStart=hav(me,st0)<n.d*1.6;const pt=useStart?st0:[a[0],a[1]];
+  setDest({name:useStart?'Partenza · '+t.name:'Entrata sulla traccia · '+t.name,where:useStart?'Inizio del giro':'Il punto più vicino della traccia',pt,joinTrack:t.id});
+  toast('Calcolo la strada fino '+(useStart?'alla partenza':'alla traccia')+'…',2200);await calcRoute(false)};
+// arrivato all'inizio della traccia: torno a seguire il giro
+setInterval(()=>{if(active!=='route'||!dest||!dest.joinTrack||!me)return;if(hav(me,dest.pt)<80){const id=dest.joinTrack;$('rcDel').click();active=id;saveGpx();gpx.forEach(drawGpx);updateNav();toast('🏁 Sei sulla traccia: buon giro!',2500);say('Sei sulla traccia. Buon giro')}},4000);
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
