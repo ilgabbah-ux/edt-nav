@@ -169,6 +169,23 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 .wide-btn{width:100%;min-height:52px;border-radius:12px;background:var(--panel2);border:2px solid var(--line);font-weight:700;font-size:16px;margin-top:10px}
 .wide-btn.go{background:var(--yellow);border-color:var(--yellow);color:#111;font-family:var(--display);font-weight:800;font-size:19px;text-transform:uppercase}
 
+/* musica */
+#musicBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 224px)}
+#musicBtn.on{border-color:var(--yellow);color:var(--yellow)}
+#player{position:fixed;z-index:550;left:calc(max(12px,env(safe-area-inset-left,0px)) + 62px);right:calc(max(12px,env(safe-area-inset-right,0px)) + 62px);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);
+  height:54px;display:none;align-items:center;gap:4px;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:0 4px 0 10px;zoom:var(--ui,1)}
+#player.on{display:flex}
+#player .pt{flex:1;min-width:0;font-weight:700;font-size:13px;line-height:1.2;overflow:hidden}
+#player .pt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#player .pt small{color:var(--muted);font-weight:500}
+#player button{width:42px;height:42px;border-radius:10px;background:var(--panel2);font-size:17px;flex:none}
+#player #pPlay{background:var(--yellow);color:#111}
+.song{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--panel2);border-radius:12px;padding:10px 12px;min-height:52px;text-align:left;width:100%}
+.song.now{outline:2px solid var(--yellow)}
+.song b{font-weight:700}.song small{display:block;color:var(--muted);font-size:12px}
+.stream{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stream a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:62px;border-radius:12px;background:var(--panel2);border:2px solid var(--line);color:var(--fg);text-decoration:none;font-weight:700}
+
 /* scheda percorso */
 #routeCard{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:600;
   background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:10px 12px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.45)}
@@ -239,6 +256,36 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 <button class="fab left" id="shareBtn" aria-label="Gruppo e posizione condivisa">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg><b id="crewCount">0</b>
 </button>
+<button class="fab" id="musicBtn" aria-label="Musica">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+</button>
+<div id="player" aria-label="Lettore musica"><div class="pt"><b id="pTitle">—</b><small id="pArtist"></small></div><button id="pPrev" aria-label="Precedente">⏮</button><button id="pPlay" aria-label="Play o pausa">▶</button><button id="pNext" aria-label="Successiva">⏭</button><button id="pStop" aria-label="Chiudi la musica">✕</button></div>
+<section class="sheet" id="musicSheet" aria-label="Musica">
+  <div class="sheet-h"><h2>Musica <em>in sella</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <div class="seg" id="mTab" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr"><button data-v="g">🤘 Il GaBbAH</button><button data-v="m">📱 I miei brani</button><button data-v="s">🎧 Streaming</button></div>
+  <div id="mG" style="margin-top:12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="wide-btn go" id="gAll" style="margin:0">▶ Tutte</button><button class="wide-btn" id="gShuf" style="margin:0">🔀 Casuale</button></div>
+    <div class="list" id="gList" style="margin-top:10px"></div>
+  </div>
+  <div id="mM" style="margin-top:12px" hidden>
+    <button class="load" id="mAdd">+ Aggiungi brani dal telefono</button>
+    <input type="file" id="mFile" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac" multiple hidden>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn" id="mAll" style="margin:0">▶ La mia playlist</button><button class="wide-btn" id="mShuf" style="margin:0">🔀 Casuale</button></div>
+    <div class="list" id="mList" style="margin-top:10px"></div>
+    <p class="hint">I brani restano salvati nell'app, anche senza rete.</p>
+  </div>
+  <div id="mS" style="margin-top:12px" hidden>
+    <p class="hint" style="margin-top:0">Apri la tua app col tuo account, fai partire la playlist e torna su EDT Nav: la musica continua sotto la navigazione.</p>
+    <div class="stream" style="margin-top:8px">
+      <a href="https://open.spotify.com/" target="_blank" rel="noopener">🟢 Spotify</a>
+      <a href="https://music.youtube.com/" target="_blank" rel="noopener">🔴 YouTube Music</a>
+      <a href="https://music.amazon.it/" target="_blank" rel="noopener">🔵 Amazon Music</a>
+      <a href="https://www.deezer.com/" target="_blank" rel="noopener">🟣 Deezer</a>
+      <a href="https://music.apple.com/" target="_blank" rel="noopener">⚪ Apple Music</a>
+      <a href="https://open.spotify.com/search/IlGabbah" target="_blank" rel="noopener">🤘 Il GaBbAH su Spotify</a>
+    </div>
+  </div>
+</section>
 <button class="fab left" id="sosBtn">IMPRE-<br>VISTO</button>
 <section class="sheet edit" id="sosSheet" aria-label="Segnala imprevisto">
   <div class="sheet-h"><h2>Segnala <em>imprevisto</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
@@ -358,6 +405,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 <script src="mappa.js?v=23"></script>
 <script src="difficolta.js?v=23"></script>
 <script src="percorso.js?v=23"></script>
+<script src="musica.js?v=1"></script>
 <script>
 (()=>{
 /* ---------- utilità ---------- */
@@ -677,7 +725,7 @@ function buildTurns(t){
 }
 function turnTxt(d){const a=Math.abs(d),dir=d>0?'destra':'sinistra';return a<60?'leggermente a '+dir:a<130?'a '+dir:a<165?'stretta a '+dir:'inversione a U'}
 let spoken={};
-function say(txt){if(!S.voice||!('speechSynthesis' in window))return;try{const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function say(txt){if(!S.voice||!('speechSynthesis' in window))return;try{const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';u.rate=1.05;if(window.EDTMUSIC){EDTMUSIC.duck(true);u.onend=u.onerror=()=>EDTMUSIC.duck(false)}speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 function sayDist(m){return m>=1000?(m/1000).toFixed(1).replace('.',',')+' chilometri':Math.round(m/10)*10+' metri'}
 // tocco sul riquadro: mostra te e la traccia insieme; la ✕ spegne la navigazione
 $('navbar').onclick=e=>{
@@ -1050,6 +1098,33 @@ function maybeReroute(off){
   if(!offSince)offSince=Date.now();
   if(Date.now()-offSince>20000&&Date.now()-lastReroute>45000&&navigator.onLine){lastReroute=Date.now();offSince=0;dest=t.dest;S.routeMode=t.mode||S.routeMode;calcRoute(true)}
 }
+
+/* ---------- musica ---------- */
+function mUi(){
+  const c=EDTMUSIC.current(),pl=EDTMUSIC.playing();
+  $('player').classList.toggle('on',!!c);$('musicBtn').classList.toggle('on',pl);
+  if(c){$('pTitle').textContent=c.title;$('pArtist').textContent=c.artist||'';$('pPlay').textContent=pl?'⏸':'▶'}
+  document.querySelectorAll('.song').forEach(el=>el.classList.toggle('now',!!c&&el.dataset.id===c.id));
+}
+EDTMUSIC.onUi(mUi);
+function mTab(v){$('mTab').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$('mG').hidden=v!=='g';$('mM').hidden=v!=='m';$('mS').hidden=v!=='s';if(v==='m')renderMine()}
+$('mTab').onclick=e=>{const b=e.target.closest('button');if(b)mTab(b.dataset.v)};
+$('gList').innerHTML=EDTMUSIC.GABBAH.map((t,i)=>`<button class="song" data-id="${t.id}" data-i="${i}"><div><b>${esc(t.title)}</b><small>Il GaBbAH</small></div><span>▶</span></button>`).join('');
+$('gList').onclick=e=>{const b=e.target.closest('.song');if(b)EDTMUSIC.playList(EDTMUSIC.GABBAH,+b.dataset.i,false)};
+$('gAll').onclick=()=>EDTMUSIC.playList(EDTMUSIC.GABBAH,0,false);
+$('gShuf').onclick=()=>EDTMUSIC.playList(EDTMUSIC.GABBAH,null,true);
+let mine=[];
+async function renderMine(){mine=await EDTMUSIC.mine();
+  $('mList').innerHTML=mine.length?mine.map((t,i)=>`<div class="song" data-id="${t.id}" data-i="${i}"><div><b>${esc(t.title)}</b><small>dal telefono</small></div><span style="display:flex;gap:6px"><button class="mini" data-a="play">▶</button><button class="mini del" data-a="del">✕</button></span></div>`).join(''):'<div class="empty">Nessun brano. Aggiungi i tuoi mp3 dal telefono.</div>';mUi()}
+$('mList').onclick=async e=>{const row=e.target.closest('.song');if(!row)return;const a=e.target.closest('button')?.dataset.a,i=+row.dataset.i;
+  if(a==='del'){await EDTMUSIC.remove(mine[i].id);renderMine();return}EDTMUSIC.playList(mine,i,false)};
+$('mAdd').onclick=()=>$('mFile').click();
+$('mFile').onchange=async e=>{const n=await EDTMUSIC.addFiles([...e.target.files]).catch(()=>0);e.target.value='';toast(n?n+' brani aggiunti alla tua playlist':'Nessun file audio valido',2000);renderMine()};
+$('mAll').onclick=async()=>{mine=await EDTMUSIC.mine();if(mine.length)EDTMUSIC.playList(mine,0,false);else toast('Aggiungi prima qualche brano')};
+$('mShuf').onclick=async()=>{mine=await EDTMUSIC.mine();if(mine.length)EDTMUSIC.playList(mine,null,true);else toast('Aggiungi prima qualche brano')};
+$('musicBtn').onclick=()=>{mTab(EDTMUSIC.current()&&EDTMUSIC.current().id.startsWith('m:')?'m':'g');showSheet('musicSheet');mUi()};
+$('pPlay').onclick=()=>EDTMUSIC.toggle();$('pNext').onclick=()=>EDTMUSIC.next();$('pPrev').onclick=()=>EDTMUSIC.prev();$('pStop').onclick=()=>EDTMUSIC.stop();
+$('player').querySelector('.pt').onclick=()=>$('musicBtn').click();
 
 /* ---------- riquadri dati ---------- */
 const DIRS=['N','NE','E','SE','S','SO','O','NO'];
