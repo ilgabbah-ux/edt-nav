@@ -372,8 +372,10 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     <button class="wide-btn" data-p="bivio"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 20V9a4 4 0 0 1 8 0v6M13 11l4 4 4-4"/></svg> Bivio sbagliato</button>
     <button class="wide-btn" data-p="panorama"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v12H3zM12 10a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7"/></svg> Panorama</button>
     <button class="wide-btn" data-p="fontana"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/></svg> Fontana</button>
+    <button class="wide-btn" data-p="benzina"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 8h7M15 9l3 2v7a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg> Distributore</button>
     <button class="wide-btn" data-p="mangiare"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v8a2 2 0 0 0 4 0V3M8 11v10M16 3c-2 2-2 6 0 8v10"/></svg> Mangiare</button>
   </div>
+  <button class="wide-btn" id="poiFuel" style="margin-top:8px;border-color:var(--yellow);color:var(--yellow)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 8h7M15 9l3 2v7a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg> Portami al distributore più vicino</button>
   <p class="hint">I pericoli avvisano chi arriva dietro 200 m prima. Tutti i punti restano anche nella traccia.</p>
   </div>
   <div class="sostab" data-t="sos">
@@ -1437,7 +1439,7 @@ async function leadSync(info){
   try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'lead',g:crew.group,from:lead.n}),{cache:'no-store'})).json();
     if(j.ok&&j.by===lead.by){lead.pts=lead.pts.concat(j.pts);if(lead.pts.length>3000)lead.pts=lead.pts.slice(-3000);lead.n=j.from+j.pts.length;drawLead()}}catch(e){}}
 /* ---------- pericoli e punti segnalati sulla traccia ---------- */
-const POI={guado:['🌊','Guado',1],fango:['🟤','Fango',1],buca:['🕳️','Buca',1],ramo:['🌳','Albero caduto',1],animali:['🐄','Animali',1],pericolo:['⚠️','Pericolo',1],bivio:['↩️','Bivio sbagliato',1],panorama:['📸','Panorama',0],fontana:['🚰','Fontana',0],mangiare:['🍝','Mangiare',0]};
+const POI={guado:['🌊','Guado',1],fango:['🟤','Fango',1],buca:['🕳️','Buca',1],ramo:['🌳','Albero caduto',1],animali:['🐄','Animali',1],pericolo:['⚠️','Pericolo',1],bivio:['↩️','Bivio sbagliato',1],panorama:['📸','Panorama',0],fontana:['🚰','Fontana',0],mangiare:['🍝','Mangiare',0],benzina:['⛽','Distributore',0]};
 let poiList=[];const poiMk={},poiWarned={},poiSaved=new Set(store.get('edt_poi_saved',[]));
 function poiToTrack(p){const t=gpx.find(x=>x.id===active&&x.pts.length>1);if(!t||poiSaved.has(p.id))return;poiSaved.add(p.id);store.set('edt_poi_saved',[...poiSaved].slice(-300));
   if(nearest(t,[p.lat,p.lon]).d>400)return;t.wpts.push({lat:p.lat,lon:p.lon,name:POI[p.k][1]+(p.by?' ('+p.by+')':'')});saveGpx();drawGpx()}
@@ -1458,6 +1460,7 @@ function poiCheck(){if(!me||Date.now()-poiCheckAt<2500)return;poiCheckAt=Date.no
     if(here&&here.d<300){const q=nearest(t,[p.lat,p.lon]);if(q.d<300&&q.along<here.along-15)return}
     poiWarned[p.id]=1;const dd=Math.max(10,Math.round(d/10)*10);buzz([300,120,300,120,300]);
     toast(`${POI[p.k][0]} ${POI[p.k][1]} tra ${dd} m${p.by?' · segnalato da '+p.by:''}`,4000);say('Attenzione, '+POI[p.k][1].toLowerCase()+' tra '+sayDist(dd))})}
+$('poiFuel').onclick=()=>{closeSheet();fuelNearest()};
 $('poiOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.p;
   if(!me){toast('Aspetto il tuo GPS…');startGPS();return}
   const fake={id:'l'+Date.now(),k,lat:+me[0].toFixed(5),lon:+me[1].toFixed(5),by:crew.name,t:Date.now()};poiToTrack(fake);
