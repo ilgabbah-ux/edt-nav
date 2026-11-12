@@ -756,7 +756,7 @@ function refreshGpx(){
     }
     if(t.id===active&&t.pts.length>1){const c=cumul(t),tot=c[c.length-1],step=tot>60000?10000:5000;let j=1;
       for(let d=step;d<tot-step/3;d+=step){while(j<c.length-1&&c[j]<d)j++;pts.push({type:'Feature',properties:{k:'km',label:String(Math.round(d/1000))},geometry:{type:'Point',coordinates:ll(t.pts[j])}})}}
-    t.wpts.forEach(w=>pts.push({type:'Feature',properties:{k:'wpt',label:w.name||''},geometry:{type:'Point',coordinates:[w.lon,w.lat]}}));
+    t.wpts.forEach((w,wi)=>pts.push({type:'Feature',properties:{k:'wpt',label:w.name||'',tid:t.id,wi},geometry:{type:'Point',coordinates:[w.lon,w.lat]}}));
   });
   map.getSource('gpx')?.setData({type:'FeatureCollection',features:lines});
   map.getSource('gpxpts')?.setData({type:'FeatureCollection',features:pts});
@@ -1641,6 +1641,15 @@ function nextThing(){if(Date.now()-nextCache.t<3000)return nextCache.v;nextCache
   const c=[];const add=(lat,lon,ic,dng)=>{const q=nearest(t,[lat,lon]);if(q.d<300&&q.along>h.along+20)c.push({ic,d:q.along-h.along,dng})};
   poiList.forEach(p=>POI[p.k]&&add(p.lat,p.lon,POI[p.k][0],POI[p.k][2]));(t.wpts||[]).forEach(w=>add(w.lat,w.lon,'📍',0));(t.fuel||[]).forEach(f=>add(f[0],f[1],'⛽',0));
   c.sort((a,b)=>a.d-b.d);nextCache.v=c[0]||null;return nextCache.v}
+/* ---------- tocca un punto della traccia: nome, raggiungilo o toglilo ---------- */
+map.on('click','gpx-wpt',e=>{const f=e.features&&e.features[0];if(!f)return;const t=gpx.find(x=>x.id===f.properties.tid),wi=+f.properties.wi;if(!t||!t.wpts[wi])return;
+  const w=t.wpts[wi],box=document.createElement('div');
+  box.innerHTML=`📍 ${esc(w.name||'Punto')}<br><small>${esc(t.name)}${me?' · '+km(hav(me,[w.lat,w.lon])):''}</small><br><button data-a="go">Portami qui</button> <button data-a="del">Togli il punto</button>`;
+  const pop=new maplibregl.Popup({closeButton:true,offset:12}).setLngLat([w.lon,w.lat]).setDOMContent(box).addTo(map);
+  box.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;pop.remove();
+    if(b.dataset.a==='go'){setDest({name:w.name||'Punto',where:'Punto di '+t.name,pt:[w.lat,w.lon]});paintMode();showSheet('routeSheet');return}
+    t.wpts.splice(wi,1);saveGpx();gpx.forEach(drawGpx);renderLists();toast('Punto tolto dalla traccia',1800)}});
+map.on('mouseenter','gpx-wpt',()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave','gpx-wpt',()=>map.getCanvas().style.cursor='');
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -1842,7 +1851,7 @@ $('rcEdit').onclick=()=>{editing2=!editing2;$('routeCard').classList.toggle('edi
 $('rcDel').onclick=()=>{editing2=false;drawVias();gpx=gpx.filter(x=>x.id!=='route');if(active==='route')active=null;saveGpx();drawGpx();renderLists();updateNav();if(destMk){destMk.remove();destMk=null}dest=null;$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on');toast('Percorso annullato',1500)};
 $('rcClose').onclick=()=>{editing2=false;drawVias();$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on')};
 // tocco sulla linea del percorso: apre la scheda, o in modifica aggiunge un passaggio nel punto giusto dell'ordine
-map.on('click','gpx-hit',e=>{
+map.on('click','gpx-hit',e=>{if(map.queryRenderedFeatures(e.point,{layers:['gpx-wpt']}).length)return;
   const f=e.features&&e.features[0];if(!f)return;if(f.properties.tid!=='route'){if(!editing2)openSheet('giro');return}
   const t=gpx.find(x=>x.id==='route');if(!t)return;
   if(!editing2){showRouteCard();return}
