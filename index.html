@@ -40,9 +40,11 @@ html,body{position:fixed;inset:0;width:100%;touch-action:none}
 .stat b{display:block;font-family:var(--display);font-weight:800;font-size:clamp(24px,7.5vw,40px);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat small{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .stat b i{font-style:normal;font-size:.5em;color:var(--muted);margin-left:2px}
-#navbar{margin-top:6px;display:none;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;
+#navbar{pointer-events:auto;cursor:pointer;margin-top:6px;display:none;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
 #navbar.on{display:grid}
+#navbar:active{filter:brightness(1.25)}
+#navOff{width:44px;height:44px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:18px;color:var(--muted)}
 #navbar.off{border-color:var(--red);background:#3a0f0c}
 #arrow{width:34px;height:34px;transition:transform .4s}
 #navtxt{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.05;font-variant-numeric:tabular-nums;min-width:0}
@@ -209,6 +211,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <svg id="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l7 19-7-4-7 4z" fill="#ffd21f"/></svg>
     <div id="navtxt">– <span>Carica una traccia GPX</span></div>
     <div id="navpct" style="font-family:var(--display);font-weight:800;font-size:18px;color:var(--muted)"></div>
+    <button id="navOff" aria-label="Spegni la navigazione">✕</button>
   </div>
   <div id="alerts"></div>
 </div>
@@ -585,6 +588,13 @@ function nearest(t,p){
   return best;
 }
 let wasOff=false;
+// tocco sul riquadro: mostra te e la traccia insieme; la ✕ spegne la navigazione
+$('navbar').onclick=e=>{
+  if(e.target.closest('#navOff')){active=null;saveGpx();drawGpx();updateNav();toast('Navigazione spenta · la riaccendi da Tracce',2200);return}
+  const t=gpx.find(x=>x.id===active);if(!t)return;
+  const pp=t.pts.map(p=>[p[0],p[1]]);if(me)pp.push(me);
+  setFollow(false);fitPts(pp);
+};
 function updateNav(){
   const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1),nb=$('navbar');
   if(!t){nb.classList.remove('on');return}
