@@ -381,7 +381,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 </section>
 <section class="sheet edit" id="routeSheet" aria-label="Naviga verso">
   <div class="sheet-h"><h2>Naviga <em>verso</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
-  <input id="rQ" type="search" placeholder="Cerca un posto: paese, rifugio, bar…" autocomplete="off" style="font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;min-height:52px;padding:0 12px;width:100%">
+  <input id="rQ" type="search" placeholder="Cerca un waypoint o un posto: rifugio, bar, paese…" autocomplete="off" style="font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;min-height:52px;padding:0 12px;width:100%">
   <div class="list" id="rRes" style="margin-top:8px"></div>
   <p class="hint">Oppure chiudi questo pannello e tieni premuto un punto sulla mappa.</p>
   <h3>Destinazione</h3>
@@ -980,13 +980,27 @@ function setDest(d){
   destMk.setLngLat(ll(d.pt));$('rInfo').textContent='';
 }
 $('routeOpen').onclick=()=>{paintMode();showSheet('routeSheet');EDTROUTE.warm(S.routeMode);setTimeout(()=>$('rQ').focus(),250)};
-$('rQ').oninput=()=>{clearTimeout(rTimer);const q=$('rQ').value.trim();if(q.length<3){$('rRes').innerHTML='';return}
+// ricerca: prima i waypoint delle tue tracce (anche offline), poi i posti di OpenStreetMap
+function allWpts(){const o=[];gpx.forEach(t=>t.wpts.forEach(w=>{if(w.name)o.push({name:w.name,where:'📍 Waypoint · '+t.name,pt:[w.lat,w.lon],wp:1})}));return o}
+const norm=x=>x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function resRow(x){const d=document.createElement('button');d.className='item';d.style.cssText='grid-template-columns:1fr;text-align:left;width:100%';
+  const dist=me?' · '+km(hav(me,x.pt)):'';
+  d.innerHTML=`<div style="min-width:0"><div class="name">${x.wp?'📍 ':''}${esc(x.name)}</div><div class="meta">${esc(x.wp?x.where.replace('📍 ',''):x.where)}${dist}</div></div>`;
+  d.onclick=()=>{setDest(x);$('rRes').innerHTML='';$('rQ').value=x.name;$('rQ').blur()};return d}
+function showWpts(q){
+  const here=me||[map.getCenter().lat,map.getCenter().lng];
+  let w=allWpts();if(q)w=w.filter(x=>norm(x.name).includes(norm(q))||norm(x.where).includes(norm(q)));
+  w.sort((a,b)=>hav(here,a.pt)-hav(here,b.pt));return w.slice(0,q?30:15);
+}
+$('rQ').onfocus=()=>{if($('rQ').value.trim())return;const w=showWpts('');$('rRes').innerHTML='';if(w.length){const h=document.createElement('div');h.className='empty';h.textContent='Waypoint delle tue tracce, dal più vicino:';$('rRes').appendChild(h);w.forEach(x=>$('rRes').appendChild(resRow(x)))}};
+$('rQ').oninput=()=>{clearTimeout(rTimer);const q=$('rQ').value.trim();
+  const w=q?showWpts(q):[];$('rRes').innerHTML='';w.forEach(x=>$('rRes').appendChild(resRow(x)));
+  if(q.length<3){if(!q)$('rQ').onfocus();return}
   rTimer=setTimeout(async()=>{try{const r=await EDTROUTE.search(q,me||[map.getCenter().lat,map.getCenter().lng]);
-    $('rRes').innerHTML=r.length?'':'<div class="empty">Nessun posto trovato</div>';
-    r.forEach(x=>{const d=document.createElement('button');d.className='item';d.style.cssText='grid-template-columns:1fr;text-align:left;width:100%';
-      d.innerHTML=`<div style="min-width:0"><div class="name">${esc(x.name)}</div><div class="meta">${esc(x.where)}</div></div>`;
-      d.onclick=()=>{setDest(x);$('rRes').innerHTML='';$('rQ').value=x.name;$('rQ').blur()};$('rRes').appendChild(d)})}
-    catch(e){$('rRes').innerHTML='<div class="empty">Ricerca non riuscita: controlla la rete</div>'}},400)};
+    $('rRes').innerHTML='';w.forEach(x=>$('rRes').appendChild(resRow(x)));
+    r.forEach(x=>$('rRes').appendChild(resRow(x)));
+    if(!w.length&&!r.length)$('rRes').innerHTML='<div class="empty">Nessun posto o waypoint trovato</div>'}
+    catch(e){if(!w.length)$('rRes').innerHTML='<div class="empty">Ricerca posti non riuscita (serve la rete). I waypoint delle tue tracce funzionano anche offline.</div>'}},400)};
 // tieni premuto sulla mappa = destinazione
 function pickPoint(lngLat){setDest({name:'Punto sulla mappa',where:lngLat.lat.toFixed(5)+', '+lngLat.lng.toFixed(5),pt:[lngLat.lat,lngLat.lng]});paintMode();showSheet('routeSheet');EDTROUTE.warm(S.routeMode)}
 let lpT=null,lpXY=null,lpDone=0;
