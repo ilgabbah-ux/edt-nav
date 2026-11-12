@@ -997,7 +997,7 @@ async function ping(force){
   if(me){q.set('lat',me[0].toFixed(6));q.set('lon',me[1].toFixed(6));if(heading!=null)q.set('h',Math.round(heading));q.set('s',st.speed||0)}
   const sent=trail.length;if(sent)q.set('tr',trailParam());
   try{
-    const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);
+    const ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000);
     const r=await fetch(SERVER+'?'+q,{redirect:'follow',cache:'no-store',signal:ac.signal}).finally(()=>clearTimeout(to));
     const j=await r.json();
     if(!j.ok)throw new Error(j.error);
