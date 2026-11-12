@@ -1154,19 +1154,21 @@ function fuelIcon(){const c=document.createElement('canvas');c.width=c.height=44
 function drawFuel(){if(!mapReady||!map.getSource('fuel'))return;const seen=new Set(),f=[];
   gpx.forEach(t=>(t.fuel||[]).forEach(p=>{const k=p[0].toFixed(4)+p[1].toFixed(4);if(seen.has(k))return;seen.add(k);f.push({type:'Feature',properties:{name:(p[2]||'')+(p[3]!=null?' · km '+p[3]:'')},geometry:{type:'Point',coordinates:[p[1],p[0]]}})}));
   map.getSource('fuel').setData({type:'FeatureCollection',features:f})}
-const OVP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+// i server Overpass sono spesso lenti o giù: li interrogo tutti insieme e tengo la prima risposta buona
+const OVP=['https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
 async function overpassFuel(area){
-  const q=`[out:json][timeout:25];nwr["amenity"="fuel"](${area});out center 300;`;
-  for(const u of OVP){try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),25000);
-    const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ac.signal}).finally(()=>clearTimeout(to));
-    if(!r.ok)continue;const j=await r.json();
-    return (j.elements||[]).map(e=>{const la=e.lat??(e.center&&e.center.lat),lo=e.lon??(e.center&&e.center.lon),t=e.tags||{};return la==null?null:[+la.toFixed(5),+lo.toFixed(5),(t.brand||t.name||'Distributore').slice(0,24)]}).filter(Boolean)}catch(e){}}
-  return null}
+  const q=`[out:json][timeout:40];nwr["amenity"="fuel"](${area});out center 400;`,ac=new AbortController(),to=setTimeout(()=>ac.abort(),45000);
+  const one=async u=>{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ac.signal});
+    if(!r.ok)throw new Error(r.status);const j=await r.json();if(!j.elements)throw new Error('vuoto');
+    return j.elements.map(e=>{const la=e.lat??(e.center&&e.center.lat),lo=e.lon??(e.center&&e.center.lon),t=e.tags||{};return la==null?null:[+la.toFixed(5),+lo.toFixed(5),(t.brand||t.name||'Distributore').slice(0,24)]}).filter(Boolean)};
+  try{const r=await Promise.any(OVP.map(one));ac.abort();return r}catch(e){return null}finally{clearTimeout(to)}}
+const fuelBusy=new Set();
 async function fuelLoad(t,quiet){
   if(!t||(t.fuel&&t.fuelAt&&Date.now()-t.fuelAt<30*864e5)||!navigator.onLine)return;
   let s=90,w=180,n=-90,e=-180;t.pts.forEach(p=>{s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1])});
-  const r=await overpassFuel(`${(s-.03).toFixed(4)},${(w-.04).toFixed(4)},${(n+.03).toFixed(4)},${(e+.04).toFixed(4)}`);
-  if(!r)return;
+  if(fuelBusy.has(t.id))return;fuelBusy.add(t.id);if(!quiet)toast('⛽ Cerco i distributori vicino al giro…',2500);
+  const r=await overpassFuel(`${(s-.03).toFixed(4)},${(w-.04).toFixed(4)},${(n+.03).toFixed(4)},${(e+.04).toFixed(4)}`);fuelBusy.delete(t.id);
+  if(!r){if(!quiet)toast('⛽ Distributori non trovati ora (server lento): riprovo più tardi',3000);setTimeout(()=>fuelLoad(t,true),120000);return}
   // solo quelli vicini alla traccia (entro 2 km), con il km del giro a cui si trovano
   const near=r.map(p=>{const q=nearest(t,p);return q.d<=2000?[p[0],p[1],p[2],Math.round(q.along/1000)]:null}).filter(Boolean).sort((a,b)=>a[3]-b[3]);
   t.fuel=near;t.fuelAt=Date.now();saveGpx();drawFuel();
