@@ -391,7 +391,7 @@ map.on('style.load',()=>{
   map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-opacity':['case',['has','s'],.75,1],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
   map.addLayer({id:'gpx-line',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','width'],'line-opacity':['get','op']}});
-  map.addLayer({id:'gpx-hit',type:'line',source:'gpx',paint:{'line-color':'#000','line-width':26,'line-opacity':0.01}});
+  map.addLayer({id:'gpx-hit',type:'line',source:'gpx',paint:{'line-color':'#000','line-width':40,'line-opacity':0.01}});
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
   map.addLayer({id:'rec-line',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':S.recColor,'line-width':S.recWidth}});
   map.addLayer({id:'gpx-wpt',type:'circle',source:'gpxpts',filter:['==',['get','k'],'wpt'],paint:{'circle-radius':7,'circle-color':'#ffd21f','circle-stroke-color':'#111','circle-stroke-width':2}});
@@ -634,7 +634,7 @@ function nearest(t,p){
 let wasOff=false,cardSoon=false;
 // tocco sul riquadro: mostra te e la traccia insieme; la ✕ spegne la navigazione
 $('navbar').onclick=e=>{
-  if(e.target.closest('#navOff')){active=null;saveGpx();drawGpx();updateNav();toast('Navigazione spenta · la riaccendi da Tracce',2200);return}
+  if(e.target.closest('#navOff')){if(active==='route'){$('rcDel').click();return}active=null;saveGpx();drawGpx();updateNav();toast('Navigazione spenta · la riaccendi da Tracce',2200);return}
   const t=gpx.find(x=>x.id===active);if(!t)return;
   const pp=t.pts.map(p=>[p[0],p[1]]);if(me)pp.push(me);
   setFollow(false);fitPts(pp);
@@ -945,7 +945,7 @@ $('rcDel').onclick=()=>{editing2=false;drawVias();gpx=gpx.filter(x=>x.id!=='rout
 $('rcClose').onclick=()=>{editing2=false;drawVias();$('routeCard').classList.remove('on','edit');$('rcEdit').classList.remove('on')};
 // tocco sulla linea del percorso: apre la scheda, o in modifica aggiunge un passaggio nel punto giusto dell'ordine
 map.on('click','gpx-hit',e=>{
-  const f=e.features&&e.features[0];if(!f||f.properties.tid!=='route')return;
+  const f=e.features&&e.features[0];if(!f)return;if(f.properties.tid!=='route'){if(!editing2)openSheet();return}
   const t=gpx.find(x=>x.id==='route');if(!t)return;
   if(!editing2){showRouteCard();return}
   const p=[e.lngLat.lat,e.lngLat.lng],a=nearest(t,p).along;t.vias=t.vias||[];
