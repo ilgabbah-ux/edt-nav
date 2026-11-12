@@ -210,6 +210,13 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 /* gruppo */
 #netPill{margin-top:6px;align-self:flex-start;display:inline-block;background:#2b2b2b;border:2px solid #777;color:#ddd;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px;pointer-events:none}
 #netPill[hidden]{display:none}
+#camBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 224px);font-size:24px}
+.phmk{width:40px;height:40px;border-radius:10px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);background-size:cover;background-position:center;cursor:pointer}
+.phgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.phgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:2px solid var(--line)}
+.rank{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;margin-top:6px}
+.rank b{font-family:var(--display);font-size:20px}.award{display:grid;grid-template-columns:1fr 1fr;gap:8px}.award div{border:2px solid var(--yellow);border-radius:12px;padding:8px 10px}.award small{display:block;color:var(--muted);font-weight:700}
+body.gloves #musicBtn,body.gloves #findBtn,body.gloves #fitBtn,body.gloves #camBtn{display:none!important}
+body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 #dim{position:fixed;inset:0;background:#000;opacity:.42;pointer-events:none;z-index:1}
 #dim[hidden]{display:none}
 .rider .role{position:absolute;margin:-22px 0 0 18px;background:var(--yellow);color:#111;border:2px solid #111;border-radius:6px;font:800 11px/1 var(--display);padding:2px 4px}
@@ -310,6 +317,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     </div>
   </div>
 </section>
+<button class="fab left" id="camBtn" aria-label="Foto del giro">📷</button>
+<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
 <button class="fab left" id="sosBtn">IMPRE-<br>VISTO</button>
 <section class="sheet edit" id="sosSheet" aria-label="Segnala imprevisto">
   <div class="sheet-h"><h2>Segnala <em>imprevisto</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
@@ -386,6 +395,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <button class="share" id="shareToggle">Condividi la mia posizione</button>
   <p class="hint" id="shareHint">Solo chi usa lo stesso codice gruppo ti vede. Si spegne quando premi di nuovo.</p>
   <div class="list" id="crewList" style="margin-top:8px"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn" id="rankOpen" style="margin:0">🏆 Classifica</button><button class="wide-btn" id="phOpen" style="margin:0">📸 Foto del giro</button></div>
   <h3>Da seguire</h3>
   <div class="list" id="gpxList"></div>
   <h3>I tuoi giri registrati</h3>
@@ -423,6 +433,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="wide-btn" id="bkNow" style="margin:0">⬆️ Salva adesso</button><button class="wide-btn" id="bkRestore" style="margin:0">⬇️ Recupera da Drive</button></div>
   <h3>Schermo</h3>
   <div class="row"><div class="t">Schermo sempre acceso<small>Mentre condividi col gruppo o registri il telefono non si blocca da solo</small></div><button class="tog" id="sAwake" aria-label="Schermo sempre acceso"></button></div>
+  <div class="row"><div class="t">Modalità guanti<small>Pulsanti enormi e meno cose sullo schermo, per usarla senza togliere i guanti</small></div><button class="tog" id="sGloves" aria-label="Modalità guanti"></button></div>
   <div class="row"><div class="t">Risparmio batteria<small>Schermo più scuro, posizione al gruppo ogni 45 s, niente 3D</small></div><button class="tog" id="sSaver" aria-label="Risparmio batteria"></button></div>
   <div class="row"><div class="t">Tema</div><div class="seg" id="sTheme"><button data-v="dark">Scuro</button><button data-v="light">Chiaro</button><button data-v="auto">Auto</button></div></div>
   <div class="row"><div class="t">Alto contrasto</div><button class="tog" id="sContrast" aria-label="Alto contrasto"></button></div>
@@ -435,6 +446,21 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Spessore</div><input type="range" id="recW" min="2" max="14" step="1"></div>
 </section>
 
+<section class="sheet" id="rideSheet" aria-label="Riepilogo del giro">
+  <div class="sheet-h"><h2>Il tuo <em>giro</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <img id="rideImg" alt="Riepilogo del giro" style="width:100%;border-radius:12px;border:2px solid var(--line)">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn go" id="rideShare" style="margin:0">📤 Condividi</button><button class="wide-btn" id="rideSave" style="margin:0">💾 Salva immagine</button></div>
+</section>
+<section class="sheet" id="rankSheet" aria-label="Classifica">
+  <div class="sheet-h"><h2>Classifica <em>EDT</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <div id="rankBody"><div class="empty">Carico…</div></div>
+</section>
+<section class="sheet" id="photoSheet" aria-label="Foto del giro">
+  <div class="sheet-h"><h2>Foto del <em>giro</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <p class="hint" style="margin-top:0">Ogni foto resta sulla mappa nel punto in cui l'hai scattata.</p>
+  <div class="phgrid" id="phGrid"></div>
+  <button class="wide-btn go" id="phShareAll">📤 Condividi le foto di oggi</button>
+</section>
 <section class="sheet" id="helpSheet" aria-label="Soccorso 112">
   <div class="sheet-h"><h2>🆘 Soccorso <em>112</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <p class="hint" style="margin-top:0">Leggi queste coordinate all'operatore del 112: le chiede sempre in montagna.</p>
@@ -513,7 +539,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 /* ---------- memoria sul telefono ----------
    Impostazioni piccole in localStorage; tracce, giri registrati e scia in IndexedDB
    (localStorage tiene solo ~5 MB: dopo qualche giro lungo si riempiva e i giri nuovi non si salvavano). */
-const HEAVY=new Set(['edt_gpx','edt_recs','edt_rec_live','edt_trail']);
+const HEAVY=new Set(['edt_gpx','edt_recs','edt_rec_live','edt_trail','edt_photos']);
 const mem=new Map(),dirty=new Set();let idbOk=false,flushT=null,dbP=null;
 function idb(){return dbP||(dbP=new Promise(res=>{try{const r=indexedDB.open('edt-nav-dati',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);r.onblocked=()=>res(null)}catch(e){res(null)}}))}
 function idbAll(){return idb().then(d=>d&&new Promise(res=>{try{const out=new Map(),q=d.transaction('kv').objectStore('kv').openCursor();q.onsuccess=()=>{const c=q.result;if(c){out.set(c.key,c.value);c.continue()}else res(out)};q.onerror=()=>res(null)}catch(e){res(null)}}))}
@@ -539,7 +565,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -697,7 +723,7 @@ $('stopBtn').onclick=()=>{
   if(!stopArmed){stopArmed=true;$('stopBtn').textContent='OK?';setTimeout(()=>{stopArmed=false;$('stopBtn').textContent='STOP'},3000);return}
   stopArmed=false;$('stopBtn').textContent='STOP';
   const pts=rec.pts.filter(Boolean);
-  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500)}
+  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500);postRide(t);setTimeout(()=>showRide(t),600)}
   else toast('Giro troppo corto, non salvato');
   rec=null;store.set('edt_rec_live',null);recalc();recUI();renderLists();
 };
@@ -919,9 +945,10 @@ function renderLists(){
   recs.forEach(t=>{
     const d=document.createElement('div');d.className='item';
     d.innerHTML=`<div class="sw" style="background:${t.color||'var(--yellow)'}"></div><div style="min-width:0"><div class="name">${esc(t.name)}</div><div class="meta">${km(t.dist)} · ${fmtT(t.time)} · +${t.gain} m</div></div>
-      <div class="acts"><button class="mini" data-a="see">Vedi</button><button class="mini" data-a="gpx">GPX</button><button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
+      <div class="acts"><button class="mini" data-a="see">Vedi</button><button class="mini" data-a="card" aria-label="Riepilogo da condividere">📊</button><button class="mini" data-a="gpx">GPX</button><button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
     d.onclick=e=>{const a=e.target.closest('button')?.dataset.a;
       if(a==='gpx')download(t);
+      if(a==='card'){showRide(t);return}
       if(a==='edit'){openEdit(t,'rec');return}
       if(a==='see'||!a){let g=gpx.find(x=>x.id==='v'+t.id);if(!g){g={id:'v'+t.id,name:t.name,pts:t.pts,wpts:[],color:t.color||'#ffd21f',width:t.width||5,op:t.op||100,vis:true};gpx.push(g);saveGpx();drawGpx(g);renderLists()}else{g.vis=true;drawGpx(g)}fitTo(g);closeSheet()}
       if(a==='del'){if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent='Sicuro?';return}recs=recs.filter(x=>x!==t);store.set('edt_recs',recs);renderLists()}};
@@ -1390,6 +1417,70 @@ async function rainCheck(){const t=zoneTrack();if(!t||!navigator.onLine||(rainIn
       if(!worst||pr>worst.pr||(pr===worst.pr&&mm>worst.mm))worst={pr,mm,km:s.km,at:new Date(tt[k])}});
     rainInfo={id:t.id,worst};rainAt=Date.now()}catch(e){rainInfo=null}
   return rainInfo}
+/* ---------- riepilogo del giro da condividere ---------- */
+function maxSpeed(pts){let m=0;for(let i=5;i<pts.length;i++){const a=pts[i-5],b=pts[i];if(!a[3]||!b[3])continue;const dt=(b[3]-a[3])/1000;if(dt<3||dt>90)continue;const v=hav(a,b)/dt*3.6;if(v<180)m=Math.max(m,v)}return Math.round(m)}
+let rideBlob=null,rideName='';
+async function rideCard(r){
+  const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  try{await document.fonts.load('800 60px "Barlow Condensed"')}catch(e){}
+  const F=(w,s)=>`${w} ${s}px "Barlow Condensed","Arial Narrow",Arial,sans-serif`;
+  let gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#1a1a17');gr.addColorStop(1,'#0b0b0a');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.fillStyle='#ffd21f';g.fillRect(0,0,W,14);
+  try{const im=new Image();im.src='icon-192.png';await im.decode();g.save();g.beginPath();g.roundRect(60,50,130,130,26);g.clip();g.drawImage(im,60,50,130,130);g.restore()}catch(e){}
+  g.fillStyle='#fff';g.font=F(800,74);g.fillText('EDT NAV',215,120);g.fillStyle='#ffd21f';g.font=F(600,38);g.fillText('ENDURO DRINKING TEAM',218,170);
+  const pts=r.pts.filter(Boolean),t0=pts[0]&&pts[0][3];
+  g.fillStyle='#fff';g.font=F(800,58);g.fillText(String(r.name||'Giro').slice(0,30).toUpperCase(),60,270);
+  g.fillStyle='#bdb9ae';g.font=F(600,36);g.fillText((t0?new Date(t0):new Date()).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+(crew.name?' · '+crew.name+(crew.no?' #'+crew.no:''):''),60,320);
+  const X=60,Y=360,MW=W-120,MH=560;g.fillStyle='#22221f';g.beginPath();g.roundRect(X,Y,MW,MH,28);g.fill();
+  if(pts.length>1){let s=90,w=180,n=-90,e=-180;pts.forEach(p=>{s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1])});
+    const k=Math.cos(rad((s+n)/2)),sx=(e-w)*k||1e-6,sy=(n-s)||1e-6,sc=Math.min((MW-80)/sx,(MH-80)/sy),ox=X+(MW-sx*sc)/2,oy=Y+(MH-sy*sc)/2;
+    const P=p=>[ox+(p[1]-w)*k*sc,oy+(n-p[0])*sc];
+    const path=()=>{g.beginPath();pts.forEach((p,i)=>{const q=P(p);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])})};
+    g.lineJoin=g.lineCap='round';path();g.strokeStyle='#000';g.lineWidth=20;g.stroke();path();g.strokeStyle='#ffd21f';g.lineWidth=10;g.stroke();
+    const a=P(pts[0]),b=P(pts[pts.length-1]);[[a,'#2f9e44'],[b,'#e3261b']].forEach(([q,col])=>{g.beginPath();g.arc(q[0],q[1],18,0,7);g.fillStyle=col;g.fill();g.lineWidth=6;g.strokeStyle='#fff';g.stroke()})}
+  const avg=r.time>60?Math.round(r.dist/r.time*3.6):0,mx=maxSpeed(pts);
+  const box=[['KM',(r.dist/1000).toFixed(1)],['TEMPO',fmtT(r.time)],['SALITA','+'+r.gain+' m'],['MEDIA',avg+' km/h'],['MAX',mx?mx+' km/h':'–'],['PARTENZA',t0?hm(new Date(t0)):'–']];
+  box.forEach(([l,v],i)=>{const bx=60+(i%3)*330,by=950+Math.floor(i/3)*170;g.fillStyle='#1b1b19';g.beginPath();g.roundRect(bx,by,300,150,22);g.fill();g.strokeStyle='#3a3833';g.lineWidth=3;g.stroke();
+    g.fillStyle='#bdb9ae';g.font=F(600,32);g.fillText(l,bx+24,by+48);g.fillStyle='#fff';g.font=F(800,64);g.fillText(v,bx+24,by+122)});
+  g.fillStyle='#ffd21f';g.font=F(800,40);g.textAlign='center';g.fillText('Tranquilli, è un giro easy',W/2,H-36);g.textAlign='left';
+  return new Promise(res=>c.toBlob(res,'image/jpeg',.9));
+}
+async function showRide(r){rideBlob=await rideCard(r);rideName=String(r.name||'giro').replace(/[^\w\- ]+/g,'_');$('rideImg').src=URL.createObjectURL(rideBlob);showSheet('rideSheet')}
+$('rideShare').onclick=async()=>{if(!rideBlob)return;const f=new File([rideBlob],rideName+'.jpg',{type:'image/jpeg'});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Giro EDT',text:'Tranquilli, è un giro easy 😏'});return}}catch(e){if(e.name==='AbortError')return}$('rideSave').click()};
+$('rideSave').onclick=()=>{if(!rideBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(rideBlob);a.download=rideName+'.jpg';document.body.appendChild(a);a.click();a.remove()};
+/* ---------- classifica del gruppo ---------- */
+async function postRide(r){if(!sharing||!crew.name||r.dist<1000)return;const pts=r.pts.filter(Boolean);
+  try{await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'ride',g:crew.group,n:crew.name,km:r.dist/1000,time:r.time,gain:r.gain,max:maxSpeed(pts),avg:r.time>60?r.dist/r.time*3.6:0})});r.posted=1;store.set('edt_recs',recs)}catch(e){}}
+$('rankOpen').onclick=async()=>{showSheet('rankSheet');const B=$('rankBody');B.innerHTML='<div class="empty">Carico la classifica…</div>';
+  try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'stats',g:crew.group}),{cache:'no-store'})).json();if(!j.ok)throw 0;
+    const day=j.day||[],by={};day.forEach(r=>{const x=by[r.n]||(by[r.n]={n:r.n,km:0,time:0,gain:0,max:0,avg:0});x.km+=r.km;x.time+=r.time;x.gain+=r.gain;x.max=Math.max(x.max,r.max);x.avg=x.time?x.km/x.time*3600:0});
+    const D=Object.values(by),top=(f,d=1)=>D.slice().sort((a,b)=>d*(b[f]-a[f]))[0];let h='<h3 style="margin-top:0">Oggi</h3>';
+    if(D.length){const aw=[['🏆 Più km',top('km'),x=>x.km.toFixed(1)+' km'],['🚀 Più veloce',top('max'),x=>x.max+' km/h'],['⛰️ Più salita',top('gain'),x=>'+'+x.gain+' m'],['🐢 Il più tranquillo',D.length>1?top('avg',-1):null,x=>Math.round(x.avg)+' km/h di media']];
+      h+='<div class="award">'+aw.filter(a=>a[1]).map(([t,x,f])=>`<div><small>${t}</small><b>${esc(x.n)}</b><small>${f(x)}</small></div>`).join('')+'</div>'}
+    else h+='<div class="empty">Ancora nessun giro oggi: si aggiorna quando ognuno preme STOP.</div>';
+    const S2=Object.entries(j.season||{}).map(([n,x])=>({n,...x})).sort((a,b)=>b.km-a.km);
+    h+=`<h3>Stagione ${j.year}</h3>`+(S2.length?S2.map((x,i)=>`<div class="rank"><b>${i<3?['🥇','🥈','🥉'][i]:i+1}</b><div><div class="name">${esc(x.n)}</div><div class="meta">${x.rides} ${x.rides===1?'giro':'giri'} · +${x.gain} m · max ${x.max} km/h</div></div><b>${Math.round(x.km)} km</b></div>`).join(''):'<div class="empty">Nessun giro ancora</div>');
+    B.innerHTML=h}catch(e){B.innerHTML='<div class="empty">Classifica non disponibile ora: serve la rete.</div>'}};
+/* ---------- foto del giro sulla mappa ---------- */
+let photos=store.get('edt_photos',[]);const phMk={};
+function idbPut(k,v){return idb().then(d=>d&&new Promise(r=>{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>r(true);tx.onerror=()=>r(false)}))}
+function idbGet(k){return idb().then(d=>d&&new Promise(r=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}))}
+async function phResize(file,max,q){const bm=await createImageBitmap(file);const s=Math.min(1,max/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.round(bm.width*s);c.height=Math.round(bm.height*s);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return c}
+function phMarker(p){if(phMk[p.id]||p.lat==null)return;const el=document.createElement('div');el.className='phmk';el.style.backgroundImage=`url(${p.th})`;el.onclick=e=>{e.stopPropagation();phOpen(p)};phMk[p.id]=new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).addTo(map)}
+async function phOpen(p){const b=await idbGet('ph_'+p.id);const box=document.createElement('div');box.innerHTML=`<img style="max-width:70vw;max-height:50vh;border-radius:8px;display:block" src="${b?URL.createObjectURL(b):p.th}"><small>${new Date(p.t).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</small><br><button>📤 Condividi</button>`;
+  const pop=p.lat!=null?new maplibregl.Popup({closeButton:true,offset:22,maxWidth:'80vw'}).setLngLat([p.lon,p.lat]).setDOMContent(box).addTo(map):null;
+  box.querySelector('button').onclick=async()=>{if(!b)return;const f=new File([b],'EDT-'+p.id+'.jpg',{type:'image/jpeg'});try{await navigator.share({files:[f]})}catch(e){}};if(!pop){closeSheet()}}
+$('camBtn').onclick=()=>$('camIn').click();
+$('camIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const big=await phResize(f,1600,.85),th=(await phResize(f,120)).toDataURL('image/jpeg',.7);const blob=await new Promise(r=>big.toBlob(r,'image/jpeg',.85));
+    const p={id:Date.now().toString(36),t:Date.now(),lat:me?+me[0].toFixed(6):null,lon:me?+me[1].toFixed(6):null,th};await idbPut('ph_'+p.id,blob);
+    photos.push(p);store.set('edt_photos',photos);phMarker(p);toast('📸 Foto salvata sulla mappa'+(me?'':' (senza posizione GPS)'),2000)}catch(err){toast('Foto non salvata',2000)}};
+photos.forEach(phMarker);
+$('phOpen').onclick=()=>{const G=$('phGrid');G.innerHTML=photos.length?'':'<div class="empty" style="grid-column:1/-1">Nessuna foto: usa il tasto 📷 sulla mappa.</div>';
+  photos.slice().reverse().forEach(p=>{const im=document.createElement('img');im.src=p.th;im.onclick=()=>{closeSheet();if(p.lat!=null)map.easeTo({center:[p.lon,p.lat],zoom:16});setTimeout(()=>phOpen(p),500)};G.appendChild(im)});showSheet('photoSheet')};
+$('phShareAll').onclick=async()=>{const d0=new Date();d0.setHours(0,0,0,0);const fs=[];for(const p of photos.filter(x=>x.t>=d0)){const b=await idbGet('ph_'+p.id);if(b)fs.push(new File([b],'EDT-'+p.id+'.jpg',{type:'image/jpeg'}))}
+  if(!fs.length){toast('Nessuna foto oggi');return}try{if(navigator.canShare&&navigator.canShare({files:fs}))await navigator.share({files:fs,title:'Foto del giro EDT'});else toast('Il telefono non permette di condividerle tutte insieme',2500)}catch(e){}};
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -1666,7 +1757,7 @@ function applyTheme(){
   const light=S.theme==='light'||(S.theme==='auto'&&matchMedia('(prefers-color-scheme: light)').matches);
   document.body.classList.toggle('light',light);document.body.classList.toggle('contrast',S.contrast);
   document.querySelector('meta[name=theme-color]').content=light?'#f3f1ea':'#0d0d0c';
-  document.documentElement.style.setProperty('--ui',S.ui);
+  document.documentElement.style.setProperty('--ui',S.gloves?Math.max(S.ui,1.4):S.ui);document.body.classList.toggle('gloves',!!S.gloves);
 }
 matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',applyTheme);
 function seg(id,key,num,after){
@@ -1684,7 +1775,7 @@ function renderBases(){
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
 tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
-tog('sSaver','saver',applySaver);tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
+tog('sSaver','saver',applySaver);tog('sGloves','gloves',()=>{applyTheme();toast(S.gloves?'🧤 Modalità guanti':'Modalità normale',1500)});tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
