@@ -53,8 +53,11 @@
         tot += d; if (/highway=track|surface=(gravel|dirt|ground|unpaved|compacted|fine_gravel|earth|grass)/.test(tags)) dirt += d;
       }
     }
+    // tempo: per l'off la stima di BRouter è da auto, la rifaccio a 20 km/h sullo sterrato e 45 su asfalto
+    let time = +p['total-time'] || 0;
+    if (mode === 'off' && tot) time = (dirt / 1000 / 20 + (tot - dirt) / 1000 / 45) * 3600;
     return {
-      pts, len: +p['track-length'] || 0, time: +p['total-time'] || 0, asc: +p['filtered ascend'] || 0,
+      pts, len: +p['track-length'] || 0, time, asc: +p['filtered ascend'] || 0,
       dirtPct: tot ? Math.round(dirt / tot * 100) : null
     };
   }
