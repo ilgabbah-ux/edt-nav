@@ -1,0 +1,63 @@
+# EDT Nav - moto enduro "Off medio"
+# sterrate di ogni grado fino al 4 senza problemi, il 5 solo se conviene; asfalto evitato quando possibile.
+# Rispetta sempre i divieti di transito ai mezzi a motore.
+
+---context:global
+assign processUnusedTags = false
+assign validForBikes = false
+assign validForFoot = false
+assign validForCars = true
+assign turnInstructionMode = 1
+assign downhillcost = 0
+assign downhillcutoff = 0
+assign uphillcost = 0
+assign uphillcutoff = 0
+
+---context:way
+
+assign motorallowed =
+  or motor_vehicle=yes|permissive|designated
+     motorcycle=yes|permissive|designated
+
+assign motorforbidden =
+  or motor_vehicle=no|private|agricultural|destination
+  or motorcycle=no|private
+  or access=no|private|agricultural
+     vehicle=no|private
+
+assign forbidden =
+  if motorallowed then false
+  else motorforbidden
+
+assign hwcost =
+  switch highway=motorway|motorway_link 10000
+  switch highway=trunk|trunk_link 7
+  switch highway=primary|primary_link 5
+  switch highway=secondary|secondary_link 3.2
+  switch highway=tertiary|tertiary_link 2.3
+  switch highway=unclassified 1.8
+  switch highway=residential|living_street 2.2
+  switch highway=service 2
+  switch highway=track
+    switch tracktype=grade1 1.1
+    switch tracktype=grade2 1.0
+    switch tracktype=grade3 1.0
+    switch tracktype=grade4 1.15
+    switch tracktype=grade5 2
+    1.05
+  10000
+
+assign smoothpenalty =
+  switch smoothness=horrible|very_horrible 1.8
+  switch smoothness=impassable 6
+  1
+
+assign costfactor =
+  if forbidden then 10000
+  else multiply hwcost smoothpenalty
+
+assign turncost = 0
+assign initialcost = 0
+
+---context:node
+assign initialcost = 0

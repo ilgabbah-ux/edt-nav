@@ -305,7 +305,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <h3>Destinazione</h3>
   <div class="item" id="rDest" style="grid-template-columns:12px 1fr"><div class="sw" style="background:#e3261b"></div><div class="empty" style="padding:0">Nessuna: cercala sopra</div></div>
   <h3>Come vuoi andarci</h3>
-  <div class="seg" id="rMode" style="width:100%"><button data-v="fast" style="flex:1;min-height:52px">⚡ Veloce asfalto</button><button data-v="off" style="flex:1;min-height:52px">🟢 Off facile</button></div>
+  <div class="seg" id="rMode" style="width:100%;display:grid;grid-template-columns:1fr 1fr"><button data-v="fast" style="min-height:52px">⚡ Veloce asfalto</button><button data-v="off" style="min-height:52px">🟢 Off facile</button><button data-v="offm" style="min-height:52px">🟠 Off medio</button><button data-v="offh" style="min-height:52px">🔴 Off hard</button></div>
   <p class="hint" id="rModeHint"></p>
   <button class="wide-btn go" id="rGo">Calcola percorso</button>
   <p class="hint" id="rInfo"></p>
@@ -826,16 +826,17 @@ window.addEventListener('pagehide',()=>{if(rec)store.set('edt_rec_live',rec)});
 
 /* ---------- naviga verso ---------- */
 let dest=null,destMk=null,rTimer=null,routing=false,offSince=0,lastReroute=0;
-const MODE_HINT={fast:'La strada più rapida su asfalto e strade carrozzabili.',off:'Preferisce sterrate facili, evita quelle dure, niente sentieri pedonali né strade vietate ai mezzi a motore.'};
-function paintMode(){$('rMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.routeMode));$('rModeHint').textContent=MODE_HINT[S.routeMode]}
-$('rMode').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.routeMode=b.dataset.v;saveS();paintMode()};
+const MODE_HINT={fast:'La strada più rapida su asfalto e strade carrozzabili.',off:'Sterrate facili (gradi 1-3), evita quelle dure.',offm:'Sterrate di ogni grado fino al 4, il 5 solo se conviene; poco asfalto.',offh:'Più sterrato possibile, anche gradi 4-5 e mulattiere aperte alle moto; asfalto solo per collegare.'};
+const MODE_COLOR={fast:'#b06bff',off:'#2fb8ff',offm:'#ff8a1f',offh:'#e3261b'};
+function paintMode(){$('rMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.routeMode));$('rModeHint').textContent=(MODE_HINT[S.routeMode]||'')+(S.routeMode==='fast'?'':' Sempre niente sentieri pedonali né strade vietate ai mezzi a motore.')}
+$('rMode').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.routeMode=b.dataset.v;saveS();paintMode();EDTROUTE.warm(S.routeMode)};
 function setDest(d){
   dest=d;
   $('rDest').innerHTML=`<div class="sw" style="background:#e3261b"></div><div style="min-width:0"><div class="name">${esc(d.name)}</div><div class="meta">${esc(d.where||'')}${me?(d.where?' · ':'')+km(hav(me,d.pt))+' in linea d\'aria':''}</div></div>`;
   if(!destMk){const el=document.createElement('div');el.innerHTML='<svg width="34" height="44" viewBox="0 0 34 44"><path d="M17 43C17 43 3 26 3 16a14 14 0 0 1 28 0c0 10-14 27-14 27z" fill="#e3261b" stroke="#111" stroke-width="3"/><circle cx="17" cy="16" r="5" fill="#ffd21f"/></svg>';destMk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(ll(d.pt)).addTo(map)}
   destMk.setLngLat(ll(d.pt));$('rInfo').textContent='';
 }
-$('routeOpen').onclick=()=>{paintMode();showSheet('routeSheet');EDTROUTE.warm();setTimeout(()=>$('rQ').focus(),250)};
+$('routeOpen').onclick=()=>{paintMode();showSheet('routeSheet');EDTROUTE.warm(S.routeMode);setTimeout(()=>$('rQ').focus(),250)};
 $('rQ').oninput=()=>{clearTimeout(rTimer);const q=$('rQ').value.trim();if(q.length<3){$('rRes').innerHTML='';return}
   rTimer=setTimeout(async()=>{try{const r=await EDTROUTE.search(q,me||[map.getCenter().lat,map.getCenter().lng]);
     $('rRes').innerHTML=r.length?'':'<div class="empty">Nessun posto trovato</div>';
@@ -844,7 +845,7 @@ $('rQ').oninput=()=>{clearTimeout(rTimer);const q=$('rQ').value.trim();if(q.leng
       d.onclick=()=>{setDest(x);$('rRes').innerHTML='';$('rQ').value=x.name;$('rQ').blur()};$('rRes').appendChild(d)})}
     catch(e){$('rRes').innerHTML='<div class="empty">Ricerca non riuscita: controlla la rete</div>'}},400)};
 // tieni premuto sulla mappa = destinazione
-function pickPoint(lngLat){setDest({name:'Punto sulla mappa',where:lngLat.lat.toFixed(5)+', '+lngLat.lng.toFixed(5),pt:[lngLat.lat,lngLat.lng]});paintMode();showSheet('routeSheet');EDTROUTE.warm()}
+function pickPoint(lngLat){setDest({name:'Punto sulla mappa',where:lngLat.lat.toFixed(5)+', '+lngLat.lng.toFixed(5),pt:[lngLat.lat,lngLat.lng]});paintMode();showSheet('routeSheet');EDTROUTE.warm(S.routeMode)}
 let lpT=null,lpXY=null,lpDone=0;
 map.on('contextmenu',e=>{if(Date.now()-lpDone>1500)pickPoint(e.lngLat)});
 // tieni premuto con un dito (alcuni telefoni non mandano il "menu" della pressione lunga)
@@ -861,7 +862,7 @@ async function calcRoute(silent){
   try{
     const r=await EDTROUTE.route(from,dest.pt,S.routeMode);
     gpx=gpx.filter(x=>x.id!=='route');
-    const t={id:'route',name:'Verso '+dest.name,pts:r.pts,wpts:[],color:S.routeMode==='off'?'#2fb8ff':'#b06bff',width:7,op:100,vis:true,dest,mode:S.routeMode};
+    const t={id:'route',name:'Verso '+dest.name,pts:r.pts,wpts:[],color:MODE_COLOR[S.routeMode]||'#2fb8ff',width:7,op:100,vis:true,dest,mode:S.routeMode};
     gpx.unshift(t);active='route';saveGpx();drawGpx();renderLists();updateNav();
     if(S.grades)EDTGRADE.along(r.pts);
     const mins=Math.max(1,Math.round(r.time/60)),dur=mins<60?mins+' min':Math.floor(mins/60)+' h '+String(mins%60).padStart(2,'0');
