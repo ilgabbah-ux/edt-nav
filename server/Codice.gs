@@ -38,7 +38,7 @@ function ping(p) {
       all[id] = {
         n: clean(p.n, 20) || 'Pilota', no: clean(p.no, 4),
         lat: Math.round(lat * 1e6) / 1e6, lon: Math.round(lon * 1e6) / 1e6,
-        s: num(p.s), h: num(p.h), sos: p.sos === '1', t: now
+        s: num(p.s), h: num(p.h), sos: p.sos === '1', r: clean(p.r, 14), t: now
       };
     }
     for (var k in all) if (now - all[k].t > STALE) delete all[k];
