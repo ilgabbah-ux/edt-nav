@@ -113,7 +113,9 @@
     },
     loaded(keys) { return keys.filter(k => mem.has(k)).length; },
     collect(keys) {
-      const f = []; keys.forEach(k => { const a = mem.get(k); if (a) f.push(...a); });
+      // la stessa sterrata può stare in due quadrati vicini: la disegno una volta sola
+      const f = [], seen = new Set();
+      keys.forEach(k => { const a = mem.get(k); if (!a) return; for (const ft of a) { const c = ft.geometry.coordinates, id = c[0][0] + ',' + c[0][1] + ',' + c.length; if (!seen.has(id)) { seen.add(id); f.push(ft); } } });
       return { type: 'FeatureCollection', features: f };
     },
     status: () => status,
