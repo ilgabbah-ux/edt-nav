@@ -534,7 +534,7 @@ map.on('style.load',()=>{
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
   map.addLayer({id:'rec-line',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':S.recColor,'line-width':S.recWidth}});
   if(!map.hasImage('fuelic'))map.addImage('fuelic',fuelIcon(),{pixelRatio:2});
-  map.addLayer({id:'fuel',type:'symbol',source:'fuel',minzoom:10,layout:{'icon-image':'fuelic','icon-size':['interpolate',['linear'],['zoom'],10,.6,14,1],'icon-allow-overlap':true,'text-field':['step',['zoom'],'',13,['get','name']],'text-font':['Noto Sans Bold'],'text-size':11,'text-offset':[0,1.4],'text-anchor':'top','text-optional':true},paint:{'text-color':'#111','text-halo-color':'#fff','text-halo-width':2}});
+  map.addLayer({id:'fuel',type:'symbol',source:'fuel',minzoom:8,layout:{'icon-image':'fuelic','icon-size':['interpolate',['linear'],['zoom'],8,.5,14,1],'icon-allow-overlap':true,'text-field':['step',['zoom'],'',13,['get','name']],'text-font':['Noto Sans Bold'],'text-size':11,'text-offset':[0,1.4],'text-anchor':'top','text-optional':true},paint:{'text-color':'#111','text-halo-color':'#fff','text-halo-width':2}});
   map.addLayer({id:'gpx-wpt',type:'circle',source:'gpxpts',filter:['==',['get','k'],'wpt'],paint:{'circle-radius':7,'circle-color':'#ffd21f','circle-stroke-color':'#111','circle-stroke-width':2}});
   map.addLayer({id:'gpx-se',type:'circle',source:'gpxpts',filter:['!=',['get','k'],'wpt'],paint:{'circle-radius':8,'circle-color':['match',['get','k'],'start','#2f9e44','#e3261b'],'circle-stroke-color':'#fff','circle-stroke-width':3}});
   map.addLayer({id:'gpx-lbl',type:'symbol',source:'gpxpts',layout:{'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':13,'text-offset':[0,1.2],'text-anchor':'top','text-allow-overlap':false},paint:{'text-color':'#111','text-halo-color':'#ffd21f','text-halo-width':2.5}});
@@ -859,8 +859,8 @@ function renderLists(){
       <div class="acts"><button class="mini ${t.id===active?'on':''}" data-a="nav">${t.id===active?'Attiva':'Segui'}</button><button class="mini ${t.vis?'on':''}" data-a="vis">${t.vis?'👁':'—'}</button><button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
     d.onclick=e=>{const a=e.target.closest('button')?.dataset.a;if(!a){fitTo(t);closeSheet();return}
       if(a==='edit'){openEdit(t,'gpx');return}
-      if(a==='nav'){if(active===t.id){active=null;toast('Navigazione spenta',1200)}else{active=t.id;t.vis=true;fitTo(t);closeSheet()}}
-      if(a==='vis'){t.vis=!t.vis;if(!t.vis&&active===t.id)active=null}
+      if(a==='nav'){if(active===t.id){active=null;toast('Navigazione spenta',1200)}else{active=t.id;t.vis=true;fitTo(t);closeSheet();fuelLoad(t,false)}}
+      if(a==='vis'){t.vis=!t.vis;if(!t.vis&&active===t.id)active=null;if(t.vis)fuelLoad(t,true)}
       if(a==='del'){if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent='Sicuro?';return}gpx=gpx.filter(x=>x!==t);if(active===t.id)active=null}
       saveGpx();gpx.forEach(drawGpx);renderLists();updateNav()};
     gl.appendChild(d);
@@ -1219,6 +1219,8 @@ $('bkRestore').onclick=async()=>{
     toast(added?added+(added>1?' giri recuperati':' giro recuperato')+' da Drive ✓':'Nessun giro nuovo da recuperare',2800)}
   catch(e){toast('Recupero non riuscito: riprova',2500)}};
 window.addEventListener('online',()=>setTimeout(()=>backupNow(true),3000));
+setTimeout(async()=>{const ts=gpx.filter(t=>t.vis&&t.id!=='route'&&t.pts.length>1&&!t.fuel);for(const t of ts)await fuelLoad(t,t.id!==active)},3500);
+window.addEventListener('online',()=>gpx.filter(t=>t.vis&&t.id!=='route'&&t.pts.length>1&&!t.fuel).forEach(t=>fuelLoad(t,true)));
 setTimeout(()=>backupNow(true),15000);
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
