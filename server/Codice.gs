@@ -6,6 +6,7 @@
  */
 var TTL = 6 * 60 * 60;          // le posizioni spariscono dopo 6 ore
 var STALE = 3 * 60 * 60 * 1000; // chi non si fa vivo da 3 ore esce dalla lista
+var TRAIL = 45 * 60 * 1000;     // la scia senza campo resta visibile 45 minuti
 
 function doGet(e) {
   var p = e.parameter || {};
@@ -35,16 +36,24 @@ function ping(p) {
     var all = JSON.parse(cache.get(g) || '{}');
     var now = Date.now();
     if (lat !== null && lon !== null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+      // scia: dove è passato mentre era senza campo (arriva tutta insieme quando torna il segnale)
+      var tr = (all[id] && all[id].tr) || [];
+      if (p.tr) String(p.tr).split(';').slice(0, 60).forEach(function (q) {
+        var a = q.split(','), la = num(a[0]), lo = num(a[1]), ag = num(a[2]);
+        if (la !== null && lo !== null && ag !== null && Math.abs(la) <= 90 && Math.abs(lo) <= 180) tr.push([Math.round(la * 1e5) / 1e5, Math.round(lo * 1e5) / 1e5, now - ag * 1000]);
+      });
+      tr = tr.filter(function (x) { return now - x[2] < TRAIL; }).sort(function (a, b) { return a[2] - b[2]; }).slice(-80);
       all[id] = {
         n: clean(p.n, 20) || 'Pilota', no: clean(p.no, 4),
         lat: Math.round(lat * 1e6) / 1e6, lon: Math.round(lon * 1e6) / 1e6,
         s: num(p.s), h: num(p.h), sos: p.sos === '1', r: clean(p.r, 14), t: now
       };
+      if (tr.length) all[id].tr = tr;
     }
     for (var k in all) if (now - all[k].t > STALE) delete all[k];
     cache.put(g, JSON.stringify(all), TTL);
     var others = [];
-    for (var k2 in all) if (k2 !== id) { var r = all[k2]; r.id = k2; r.ago = Math.round((now - r.t) / 1000); others.push(r); }
+    for (var k2 in all) if (k2 !== id) { var r = all[k2]; r.id = k2; if (r.tr) { r.tr = r.tr.filter(function (x) { return now - x[2] < TRAIL; }).map(function (x) { return [x[0], x[1]]; }); if (!r.tr.length) delete r.tr; } r.ago = Math.round((now - r.t) / 1000); others.push(r); }
     return { ok: true, now: now, riders: others };
   } finally {
     lock.releaseLock();
