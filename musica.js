@@ -13,7 +13,7 @@
     ['orto-bio', 'Orto Bio'], ['leventino-2026', 'Leventino 2026'], ['mirco-e-gabbah-fest-v2', 'Mirco e Gabbah Fest'],
     ['angelo-potter', 'Angelo Potter'], ['angelo-vs-gabbah', 'Angelo vs Gabbah'], ['costa-vs-linus', 'Costa vs Linus'],
     ['sergione-vs-renard', 'Sergione vs Renard'], ['christmas-madness', 'Christmas Madness'], ['ethereal-hammer', 'Ethereal Hammer'],
-    ['palincana', 'Palincana'], ['jingle-brap', 'Jingle Brap!'], ['fango-senza-pieta', 'Fango senza pietà'], ['mud-monster', 'Mud Monster'],
+    ['fango-senza-pieta', 'Fango senza pietà'], ['mud-monster', 'Mud Monster'],
     ['the-mud-critter', 'The Mud Critter'], ['euro-zero-inferno', 'Euro Zero Inferno'], ['ti-fa-male-la-gamba', 'Ti fa male la gamba?'],
     ['re-dell-ignoranza-4x4', "I Re dell'ignoranza 4x4"], ['halloween-trial-team-night', 'Halloween (Trial Team Night)'], ['disgelo-dance', 'Disgelo Dance'],
     ['la-solitudine-della-t7', 'La solitudine (della T7)'], ['ansia-da-colonnina', 'Ansia da colonnina'], ['quanto-costa', 'Quanto costa?'],
