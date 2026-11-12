@@ -13,15 +13,15 @@
     ['orto-bio', 'Orto Bio'], ['leventino-2026', 'Leventino 2026'], ['mirco-e-gabbah-fest-v2', 'Mirco e Gabbah Fest'],
     ['angelo-potter', 'Angelo Potter'], ['angelo-vs-gabbah', 'Angelo vs Gabbah'], ['costa-vs-linus', 'Costa vs Linus'],
     ['sergione-vs-renard', 'Sergione vs Renard'], ['christmas-madness', 'Christmas Madness'], ['ethereal-hammer', 'Ethereal Hammer'],
-    ['fango-senza-pieta', 'Fango senza pietà'], ['mud-monster', 'Mud Monster'],
-    ['the-mud-critter', 'The Mud Critter'], ['euro-zero-inferno', 'Euro Zero Inferno'], ['ti-fa-male-la-gamba', 'Ti fa male la gamba?'],
+    ['fango-senza-pieta', 'Fango senza pietà'], 
+    ['euro-zero-inferno', 'Euro Zero Inferno'], ['ti-fa-male-la-gamba', 'Ti fa male la gamba?'],
     ['re-dell-ignoranza-4x4', "I Re dell'ignoranza 4x4"], ['halloween-trial-team-night', 'Halloween (Trial Team Night)'], ['disgelo-dance', 'Disgelo Dance'],
-    ['la-solitudine-della-t7', 'La solitudine (della T7)'], ['ansia-da-colonnina', 'Ansia da colonnina'], ['quanto-costa', 'Quanto costa?'],
+    ['ansia-da-colonnina', 'Ansia da colonnina'], ['quanto-costa', 'Quanto costa?'],
     ['bollo-addio', 'Bollo addio! Pieno porco dio!'], ['lultimo-e-poi-andiamo', "L'ultimo e poi andiamo!"], ['da-domani', 'Da domani'],
-    ['mirco-vs-miti', 'Mirco vs Miti'], ['purcello-vs-paletta', 'Purcello vs Paletta'], ['palettosky', 'Palettosky'], ['angelo', 'Angelo'],
-    ['angelo-potter-ska', 'Angelo Potter (Ska)'], ['costa-gay', 'Costa Gay'], ['mirco-e-gabbah-fest-edition', 'Mirco e Gabbah Fest Edition'],
-    ['stan-del-gabbah', 'Stan del Gabbah'], ['giro-easy-extended', 'Giro Easy Extended'], ['all-i-want-for-xmas-is-edt', 'All I Want for Xmas Is EDT'],
-    ['edt-manele-3', 'EDT Manele 3'], ['edt-manele-4', 'EDT Manele 4'], ['prosecco-e-spritz', 'Prosecco e Spritz'], ['mami-lo-spritz', 'Mami lo Spritz!'],
+    ['mirco-vs-miti', 'Mirco vs Miti'], ['purcello-vs-paletta', 'Purcello vs Paletta'], ['angelo', 'Angelo'],
+    ['costa-gay', 'Costa Gay'], ['mirco-e-gabbah-fest-edition', 'Mirco e Gabbah Fest Edition'],
+    ['all-i-want-for-xmas-is-edt', 'All I Want for Xmas Is EDT'],
+    ['prosecco-e-spritz', 'Prosecco e Spritz'], ['mami-lo-spritz', 'Mami lo Spritz!'],
     ['porco-dio', 'Porco Dio!']
   ].map(([f, t]) => ({ id: 'g:' + f, title: t, artist: 'Il GaBbAH', src: 'musica/' + f + '.mp3' }));
 
