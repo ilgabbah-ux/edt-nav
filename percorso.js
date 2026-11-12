@@ -3,7 +3,8 @@
    - "Veloce asfalto": profilo car-fast di BRouter (solo strade asfaltate/carrozzabili, il più rapido)
    - "Off facile / medio / hard": profili nostri in profili/*.brf, sempre più sterrato e più duro;
      nessuno passa su sentieri pedonali o strade vietate ai mezzi a motore.
-   Ricerca posti: Photon (komoot), sempre OpenStreetMap. */
+   Tragitti lunghi o BRouter giù: Valhalla (FOSSGIS) col profilo moto.
+   Ricerca posti: Photon (komoot) e Nominatim insieme, sempre OpenStreetMap. */
 (function () {
   const BR = 'https://brouter.de/brouter';
   const FILES = { off: 'moto-off-facile', offm: 'moto-off-medio', offh: 'moto-off-hard' };
@@ -25,7 +26,7 @@
     ids[mode] = { id: j.profileid, at: Date.now() }; return j.profileid;
   }
 
-  async function route(from, to, mode, vias) {
+  async function routeBR(from, to, mode, vias) {
     // from/to/vias: [lat, lon]; i punti di passaggio vanno in mezzo
     const lonlats = [from].concat(vias || [], [to]).map(p => p[1].toFixed(6) + ',' + p[0].toFixed(6)).join('|');
     const isOff = !!FILES[mode];
@@ -65,6 +66,24 @@
       pts, len: +p['track-length'] || 0, time, asc: +p['filtered ascend'] || 0, desc: descOf(pts),
       dirtPct: tot ? Math.round(dirt / tot * 100) : null
     };
+  }
+
+  // riserva: Valhalla (OpenStreetMap, server FOSSGIS) con il profilo moto. Serve per i tragitti lunghi
+  // (BRouter pubblico si ferma dopo pochi secondi di calcolo) o quando BRouter è giù.
+  function poly6(str) { const out = []; let i = 0, la = 0, lo = 0; while (i < str.length) { for (const k of [0, 1]) { let r = 0, sh = 0, b; do { b = str.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32); const d = r & 1 ? ~(r >> 1) : r >> 1; if (k) lo += d; else la += d; } out.push([la / 1e6, lo / 1e6, null]); } return out; }
+  async function routeVH(from, to, mode, vias) {
+    const locs = [from].concat(vias || [], [to]).map((p, i, a) => ({ lat: p[0], lon: p[1], type: i === 0 || i === a.length - 1 ? 'break' : 'through' }));
+    const trails = { off: 0.5, offm: 0.8, offh: 1 }[mode];
+    const body = { locations: locs, costing: 'motorcycle', units: 'kilometers', language: 'it-IT', directions_type: 'none', costing_options: { motorcycle: trails != null ? { use_trails: trails, use_highways: 0.3 } : {} } };
+    const r = await timed('https://valhalla1.openstreetmap.de/route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 30000);
+    const j = await r.json();
+    if (!r.ok || !j.trip) throw new Error((j && (j.error || j.status_message)) || ('HTTP ' + r.status));
+    let pts = []; j.trip.legs.forEach((l, i) => { const q = poly6(l.shape); pts = pts.concat(i ? q.slice(1) : q); });
+    return { pts, len: j.trip.summary.length * 1000, time: j.trip.summary.time, asc: null, desc: null, dirtPct: null, long: 1 };
+  }
+  async function route(from, to, mode, vias) {
+    try { return await routeBR(from, to, mode, vias); }
+    catch (e) { if (!navigator.onLine) throw e; return await routeVH(from, to, mode, vias); }
   }
 
   function descOf(pts) { let d = 0, b = null; for (const p of pts) { if (p[2] == null) continue; if (b == null) { b = p[2]; continue; } if (b - p[2] > 4) { d += b - p[2]; b = p[2]; } else if (p[2] - b > 4) b = p[2]; } return d; }
