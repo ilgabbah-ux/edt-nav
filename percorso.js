@@ -69,16 +69,29 @@
 
   function descOf(pts) { let d = 0, b = null; for (const p of pts) { if (p[2] == null) continue; if (b == null) { b = p[2]; continue; } if (b - p[2] > 4) { d += b - p[2]; b = p[2]; } else if (p[2] - b > 4) b = p[2]; } return d; }
 
-  async function search(q, near) {
-    let u = 'https://photon.komoot.io/api/?limit=7&q=' + encodeURIComponent(q);
+  // ricerca posti: Photon e Nominatim insieme, vince il primo che risponde con qualcosa (Photon a volte è giù)
+  async function photon(q, near) {
+    let u = 'https://photon.komoot.io/api/?limit=7&lang=it&q=' + encodeURIComponent(q);
     if (near) u += '&lat=' + near[0].toFixed(4) + '&lon=' + near[1].toFixed(4);
-    const r = await timed(u, null, 12000);
+    const r = await timed(u, null, 8000); if (!r.ok) throw new Error(r.status);
     const j = await r.json();
-    return (j.features || []).map(f => {
+    const out = (j.features || []).map(f => {
       const pr = f.properties || {}, c = f.geometry.coordinates;
       const where = [pr.city || pr.town || pr.village, pr.county, pr.state].filter(Boolean).filter(x => x !== pr.name);
       return { name: pr.name || pr.street || 'Posto', where: [...new Set(where)].slice(0, 2).join(', '), pt: [c[1], c[0]] };
     });
+    if (!out.length) throw new Error('vuoto'); return out;
+  }
+  async function nominatim(q, near) {
+    let u = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=7&accept-language=it&q=' + encodeURIComponent(q);
+    const r = await timed(u, null, 8000); if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    const out = j.map(x => { const parts = String(x.display_name || '').split(', '); return { name: x.name || parts[0] || 'Posto', where: parts.slice(1, 3).join(', '), pt: [+x.lat, +x.lon] }; });
+    if (!out.length) throw new Error('vuoto'); return out;
+  }
+  async function search(q, near) {
+    try { return await Promise.any([photon(q, near), nominatim(q, near)]); }
+    catch (e) { if (e.errors && e.errors.every(x => x.message === 'vuoto')) return []; throw e; }
   }
 
   window.EDTROUTE = { route, search, warm: (m) => FILES[m] ? offProfile(m).catch(() => {}) : null };

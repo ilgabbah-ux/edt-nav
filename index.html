@@ -596,7 +596,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
 <script src="mappa.js?v=23"></script>
 <script src="difficolta.js?v=24"></script>
-<script src="percorso.js?v=23"></script>
+<script src="percorso.js?v=24"></script>
 <script src="musica.js?v=8"></script>
 <script>
 (async()=>{
@@ -891,7 +891,7 @@ function frame(now){
   if(fixV>=1.5||(shownPt&&hav(shownPt,fixPt)>.5)||(follow&&Math.abs(map.getPitch()-((S.tilt&&lastKmh>4)?55:0))>.5))raf=requestAnimationFrame(frame);
 }
 // telecamera: inclinata e con il pilota in basso quando ti muovi, piatta da fermo
-let lastKmh=0,touching=false,userAt=0,camPos=null,camTilt=null,camHead=null;
+let rideAt=0,lastKmh=0,touching=false,userAt=0,camPos=null,camTilt=null,camHead=null;
 ['touchstart','pointerdown','wheel'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,e=>{touching=ev!=='wheel';userAt=Date.now();if(ev==='wheel'||(e.touches&&e.touches.length>1)){userZoomed=true;manualZoomAt=Date.now()}},{passive:true}));
 ['touchend','touchcancel','pointerup'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,()=>{touching=false;userAt=Date.now()},{passive:true}));
 function camera(now){
@@ -929,7 +929,7 @@ function onPos(p){
       if(rec.pts.length%10===0)store.set('edt_rec_live',rec);
     }
   }
-  lastKmh=kmh;
+  lastKmh=kmh;if(kmh>10)rideAt=Date.now();
   if(follow){const z=autoZoom(kmh);if(z)zoomGoal=z;if(!raf)raf=requestAnimationFrame(frame)}
   updateNav();renderStats();if(poiList.length)poiCheck();
 }
@@ -1255,6 +1255,8 @@ function checkAlerts(){
     if(d.sos){out.push({sos:true,id,txt:`${d.n}: ${d.r||'FERMO'}${me?' · '+km(hav(me,[d.lat,d.lon])):''}`});if(!sosSeen[id]){sosSeen[id]=1;buzz([400,150,400,150,400])}continue}
     delete sosSeen[id];
     if(!me)continue;
+    // "nessun segnale" solo durante il giro (registri o ti sei mosso da poco), non a casa sul divano
+    if(d.ago>900&&!(rec||Date.now()-rideAt<1800e3))continue;
     if(d.ago>900){if(!silentSent[id]){silentSent[id]=1;buzz([200,100,200])}out.push({id,txt:`${d.n}: nessun segnale da ${ago(d.ago).replace(' fa','')}`});continue}
     delete silentSent[id];
     if(d.m&&d.mAgo!=null&&d.mAgo<180&&QM[d.m.c]){
