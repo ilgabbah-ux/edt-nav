@@ -1236,6 +1236,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
     if(rec||(typeof dest!=='undefined'&&dest)){toast('Nuova versione di EDT Nav pronta: chiudi e riapri l\'app quando hai finito di registrare',6000);return}
     location.reload()});
 }
+if(location.hash==='#debug')window._edt={closeSheet,setFollow,ping,riders,behindSince,checkAlerts,get me(){return me}};
 })();
 </script>
 </body>
