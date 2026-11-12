@@ -240,6 +240,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>
     Carica GPX
   </button>
+  <button class="wide-btn" id="routeOpen" style="margin-top:8px">🧭 Naviga verso…</button>
   <input type="file" id="fileIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple hidden>
   <h3>Gruppo del giro</h3>
   <div class="form">
@@ -296,11 +297,25 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <button class="wide-btn" id="eRev">⇄ Inverti il senso di marcia</button>
   <button class="wide-btn go" id="eSave">Salva</button>
 </section>
+<section class="sheet edit" id="routeSheet" aria-label="Naviga verso">
+  <div class="sheet-h"><h2>Naviga <em>verso</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <input id="rQ" type="search" placeholder="Cerca un posto: paese, rifugio, bar…" autocomplete="off" style="font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;min-height:52px;padding:0 12px;width:100%">
+  <div class="list" id="rRes" style="margin-top:8px"></div>
+  <p class="hint">Oppure chiudi questo pannello e tieni premuto un punto sulla mappa.</p>
+  <h3>Destinazione</h3>
+  <div class="item" id="rDest" style="grid-template-columns:12px 1fr"><div class="sw" style="background:#e3261b"></div><div class="empty" style="padding:0">Nessuna: cercala sopra</div></div>
+  <h3>Come vuoi andarci</h3>
+  <div class="seg" id="rMode" style="width:100%"><button data-v="fast" style="flex:1;min-height:52px">⚡ Veloce asfalto</button><button data-v="off" style="flex:1;min-height:52px">🟢 Off facile</button></div>
+  <p class="hint" id="rModeHint"></p>
+  <button class="wide-btn go" id="rGo">Calcola percorso</button>
+  <p class="hint" id="rInfo"></p>
+</section>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
 <script src="mappa.js"></script>
 <script src="difficolta.js"></script>
+<script src="percorso.js"></script>
 <script>
 (()=>{
 /* ---------- utilità ---------- */
@@ -318,7 +333,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
+  grades:true,routeMode:'off',tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -605,7 +620,7 @@ function updateNav(){
   st.left=left;
   nb.classList.toggle('off',off);
   if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}}
-  wasOff=off;
+  wasOff=off;maybeReroute(off);
   if(far){const a=t.pts[n.i-1],b=t.pts[n.i],tg=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u],br0=bearing(me,tg);
     $('arrow').style.transform=`rotate(${heading!=null?br0-heading:br0}deg)`;
     $('navtxt').innerHTML='Traccia a '+esc(km(n.d))+' <span>'+esc(t.name)+' · segui la freccia</span>';$('navpct').textContent='';return}
@@ -808,6 +823,62 @@ let lock=null;
 async function wake(){try{if('wakeLock' in navigator&&!lock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(rec)recalc();if(rec)store.set('edt_rec_live',rec)}else if(rec)store.set('edt_rec_live',rec)});
 window.addEventListener('pagehide',()=>{if(rec)store.set('edt_rec_live',rec)});
+
+/* ---------- naviga verso ---------- */
+let dest=null,destMk=null,rTimer=null,routing=false,offSince=0,lastReroute=0;
+const MODE_HINT={fast:'La strada più rapida su asfalto e strade carrozzabili.',off:'Preferisce sterrate facili, evita quelle dure, niente sentieri pedonali né strade vietate ai mezzi a motore.'};
+function paintMode(){$('rMode').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.routeMode));$('rModeHint').textContent=MODE_HINT[S.routeMode]}
+$('rMode').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.routeMode=b.dataset.v;saveS();paintMode()};
+function setDest(d){
+  dest=d;
+  $('rDest').innerHTML=`<div class="sw" style="background:#e3261b"></div><div style="min-width:0"><div class="name">${esc(d.name)}</div><div class="meta">${esc(d.where||'')}${me?(d.where?' · ':'')+km(hav(me,d.pt))+' in linea d\'aria':''}</div></div>`;
+  if(!destMk){const el=document.createElement('div');el.innerHTML='<svg width="34" height="44" viewBox="0 0 34 44"><path d="M17 43C17 43 3 26 3 16a14 14 0 0 1 28 0c0 10-14 27-14 27z" fill="#e3261b" stroke="#111" stroke-width="3"/><circle cx="17" cy="16" r="5" fill="#ffd21f"/></svg>';destMk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(ll(d.pt)).addTo(map)}
+  destMk.setLngLat(ll(d.pt));$('rInfo').textContent='';
+}
+$('routeOpen').onclick=()=>{paintMode();showSheet('routeSheet');EDTROUTE.warm();setTimeout(()=>$('rQ').focus(),250)};
+$('rQ').oninput=()=>{clearTimeout(rTimer);const q=$('rQ').value.trim();if(q.length<3){$('rRes').innerHTML='';return}
+  rTimer=setTimeout(async()=>{try{const r=await EDTROUTE.search(q,me||[map.getCenter().lat,map.getCenter().lng]);
+    $('rRes').innerHTML=r.length?'':'<div class="empty">Nessun posto trovato</div>';
+    r.forEach(x=>{const d=document.createElement('button');d.className='item';d.style.cssText='grid-template-columns:1fr;text-align:left;width:100%';
+      d.innerHTML=`<div style="min-width:0"><div class="name">${esc(x.name)}</div><div class="meta">${esc(x.where)}</div></div>`;
+      d.onclick=()=>{setDest(x);$('rRes').innerHTML='';$('rQ').value=x.name;$('rQ').blur()};$('rRes').appendChild(d)})}
+    catch(e){$('rRes').innerHTML='<div class="empty">Ricerca non riuscita: controlla la rete</div>'}},400)};
+// tieni premuto sulla mappa = destinazione
+function pickPoint(lngLat){setDest({name:'Punto sulla mappa',where:lngLat.lat.toFixed(5)+', '+lngLat.lng.toFixed(5),pt:[lngLat.lat,lngLat.lng]});paintMode();showSheet('routeSheet');EDTROUTE.warm()}
+let lpT=null,lpXY=null,lpDone=0;
+map.on('contextmenu',e=>{if(Date.now()-lpDone>1500)pickPoint(e.lngLat)});
+// tieni premuto con un dito (alcuni telefoni non mandano il "menu" della pressione lunga)
+const cc=map.getCanvasContainer();
+cc.addEventListener('touchstart',e=>{clearTimeout(lpT);if(e.touches.length!==1)return;const t=e.touches[0],r=cc.getBoundingClientRect();lpXY=[t.clientX-r.left,t.clientY-r.top];
+  lpT=setTimeout(()=>{lpDone=Date.now();try{navigator.vibrate&&navigator.vibrate(40)}catch(_){}pickPoint(map.unproject(lpXY))},650)},{passive:true});
+cc.addEventListener('touchmove',e=>{if(!lpT||!lpXY)return;const t=e.touches[0],r=cc.getBoundingClientRect();if(Math.hypot(t.clientX-r.left-lpXY[0],t.clientY-r.top-lpXY[1])>12){clearTimeout(lpT);lpT=null}},{passive:true});
+['touchend','touchcancel'].forEach(ev=>cc.addEventListener(ev,()=>{clearTimeout(lpT);lpT=null},{passive:true}));
+async function calcRoute(silent){
+  if(!dest){toast('Scegli prima dove andare');return}
+  if(routing)return;routing=true;
+  const from=me||[map.getCenter().lat,map.getCenter().lng];
+  if(!silent){$('rGo').textContent='Calcolo il percorso…';$('rInfo').textContent=''}
+  try{
+    const r=await EDTROUTE.route(from,dest.pt,S.routeMode);
+    gpx=gpx.filter(x=>x.id!=='route');
+    const t={id:'route',name:'Verso '+dest.name,pts:r.pts,wpts:[],color:S.routeMode==='off'?'#2fb8ff':'#b06bff',width:7,op:100,vis:true,dest,mode:S.routeMode};
+    gpx.unshift(t);active='route';saveGpx();drawGpx();renderLists();updateNav();
+    if(S.grades)EDTGRADE.along(r.pts);
+    const mins=Math.max(1,Math.round(r.time/60)),dur=mins<60?mins+' min':Math.floor(mins/60)+' h '+String(mins%60).padStart(2,'0');
+    const info=`${km(r.len)} · circa ${dur} · +${Math.round(r.asc)} m${r.dirtPct!=null?' · '+r.dirtPct+'% sterrato':''}`;
+    if(silent)toast('Percorso ricalcolato · '+info,3000);
+    else{$('rInfo').textContent=info;closeSheet();if(me)setFollow(true);else fitTo(t);toast('Percorso pronto · '+info,3500)}
+  }catch(e){if(!silent)$('rInfo').textContent='Percorso non calcolato: '+(navigator.onLine?'riprova tra poco':'serve la rete')+'.';else toast('Fuori percorso: ricalcolo non riuscito, riprovo',2500)}
+  finally{routing=false;$('rGo').textContent='Calcola percorso'}
+}
+$('rGo').onclick=()=>calcRoute(false);
+// fuori dal percorso calcolato da più di 20 s: lo ricalcolo da dove sei
+function maybeReroute(off){
+  const t=gpx.find(x=>x.id===active);
+  if(!off||!t||t.id!=='route'||!t.dest||!me){offSince=0;return}
+  if(!offSince)offSince=Date.now();
+  if(Date.now()-offSince>20000&&Date.now()-lastReroute>45000&&navigator.onLine){lastReroute=Date.now();offSince=0;dest=t.dest;S.routeMode=t.mode||S.routeMode;calcRoute(true)}
+}
 
 /* ---------- riquadri dati ---------- */
 const DIRS=['N','NE','E','SE','S','SO','O','NO'];
