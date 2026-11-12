@@ -17,6 +17,7 @@ function doGet(e) {
     else if (p.a === 'bye') out = bye(p);
     else if (p.a === 'tget') out = trackGet(p);
     else if (p.a === 'lead') out = leadGet(p);
+    else if (p.a === 'stats') out = statsGet(p);
     else out = { ok: true, msg: 'EDT Nav server attivo' };
   } catch (err) {
     out = { ok: false, error: String(err) };
@@ -116,6 +117,7 @@ function doPost(e) {
   try {
     var b = JSON.parse((e.postData && e.postData.contents) || '{}');
     if (b.a === 'tset') out = trackSet(b);
+    else if (b.a === 'ride') out = rideAdd(b);
     else if (b.key !== EXPORT_KEY) out = { ok: false, error: 'codice' };
     else if (b.a === 'save') out = saveRide(b);
     else if (b.a === 'blist') out = listRides(b);
@@ -168,4 +170,31 @@ function leadGet(p) {
   var g = key(p.g || 'EDT'), lead = JSON.parse(CacheService.getScriptCache().get(g + '_lead') || '{"base":0,"pts":[]}');
   var from = Math.max(0, (num(p.from) || 0) - lead.base);
   return { ok: true, by: lead.by || '', base: lead.base, from: lead.base + from, pts: lead.pts.slice(from) };
+}
+
+/* ---------- classifica: giri di oggi e totali della stagione ----------
+   Salvati in un file JSON su Drive (tracks/Giri EDT Nav/classifica-<gruppo>.json): Drive è già autorizzato. */
+function statsFile(g) {
+  var dir = sub(DriveApp.getFolderById(TRACKS_ROOT), 'Giri EDT Nav'), name = 'classifica-' + g + '.json', it = dir.getFilesByName(name);
+  return it.hasNext() ? it.next() : dir.createFile(name, '{}', 'application/json');
+}
+function rideAdd(b) {
+  var g = key(b.g || 'EDT'), n = clean(b.n, 20) || 'Pilota', now = new Date();
+  var r = { n: n, km: Math.round((num(b.km) || 0) * 10) / 10, time: Math.round(num(b.time) || 0), gain: Math.round(num(b.gain) || 0), max: Math.round(num(b.max) || 0), avg: Math.round(num(b.avg) || 0), t: now.getTime() };
+  if (r.km < 1 || r.km > 1500) return { ok: false, error: 'giro' };
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var f = statsFile(g), st = JSON.parse(f.getBlob().getDataAsString() || '{}'), day = Utilities.formatDate(now, 'Europe/Rome', 'yyyy-MM-dd'), y = String(now.getFullYear());
+    if (st.day !== day) { st.day = day; st.rides = []; }
+    st.rides.push(r); st.rides = st.rides.slice(-60);
+    st.season = st.season || {}; var s = st.season[y] || {}, x = s[n] || { km: 0, rides: 0, gain: 0, max: 0 };
+    x.km = Math.round((x.km + r.km) * 10) / 10; x.rides++; x.gain += r.gain; x.max = Math.max(x.max, r.max); s[n] = x; st.season[y] = s;
+    f.setContent(JSON.stringify(st));
+  } finally { lock.releaseLock(); }
+  return { ok: true };
+}
+function statsGet(p) {
+  var g = key(p.g || 'EDT'), now = new Date(), st = JSON.parse(statsFile(g).getBlob().getDataAsString() || '{}');
+  var day = Utilities.formatDate(now, 'Europe/Rome', 'yyyy-MM-dd'), y = String(now.getFullYear());
+  return { ok: true, day: st.day === day ? st.rides : [], season: (st.season || {})[y] || {}, year: now.getFullYear() };
 }
