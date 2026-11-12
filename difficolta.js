@@ -7,7 +7,7 @@
    La mappa si divide in quadrati di ~10 km (tasselli z12): ogni quadrato si scarica una volta sola. */
 (function () {
   const Z = 12, TTL = 30 * 864e5, MAX_VIEW = 8;
-  const SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+  const SERVERS = ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
   const COLORS = { 1: '#1b7f2a', 2: '#43b649', 3: '#f2c200', 4: '#f07c00', 5: '#d7261e' };
   const SMOOTH = { excellent: 1, good: 1, intermediate: 2, bad: 3, very_bad: 4, horrible: 5, very_horrible: 5, impassable: 5 };
 
@@ -56,24 +56,25 @@
     const [x, y] = key.split('/').map(Number);
     const s = y2lat(y + 1), n = y2lat(y), w = x2lon(x), e = x2lon(x + 1);
     const q = `[out:json][timeout:25];way["highway"="track"](${s},${w},${n},${e});out tags geom;`;
-    let lastErr;
-    for (const url of SERVERS) {
-      try {
-        const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 15000);
-        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ac.signal }).finally(() => clearTimeout(to));
-        if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
-        const j = await r.json();
-        const feats = [];
-        for (const el of j.elements || []) {
-          if (!el.geometry || el.geometry.length < 2) continue;
-          const g = grade(el.tags || {});
-          if (!g) continue;
-          feats.push({ type: 'Feature', properties: { g }, geometry: { type: 'LineString', coordinates: el.geometry.map(p => [+p.lon.toFixed(6), +p.lat.toFixed(6)]) } });
-        }
-        return feats;
-      } catch (err) { lastErr = err; }
-    }
-    throw lastErr || new Error('rete');
+    // i server Overpass sono spesso lenti o giù: li interrogo tutti insieme e tengo la prima risposta buona
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 45000);
+    const one = async (url) => {
+      const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ac.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if (!j.elements) throw new Error('vuoto');
+      const feats = [];
+      for (const el of j.elements) {
+        if (!el.geometry || el.geometry.length < 2) continue;
+        const g = grade(el.tags || {});
+        if (!g) continue;
+        feats.push({ type: 'Feature', properties: { g }, geometry: { type: 'LineString', coordinates: el.geometry.map(p => [+p.lon.toFixed(6), +p.lat.toFixed(6)]) } });
+      }
+      return feats;
+    };
+    try { const f = await Promise.any(SERVERS.map(one)); ac.abort(); return f; }
+    catch (e) { throw new Error('rete'); }
+    finally { clearTimeout(to); }
   }
 
   // --- stato ---

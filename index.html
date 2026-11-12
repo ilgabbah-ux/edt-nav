@@ -452,7 +452,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
 <script src="mappa.js?v=23"></script>
-<script src="difficolta.js?v=23"></script>
+<script src="difficolta.js?v=24"></script>
 <script src="percorso.js?v=23"></script>
 <script src="musica.js?v=1"></script>
 <script>
@@ -642,7 +642,7 @@ $('recBtn').onclick=()=>{
   if(!rec){const d=new Date();rec={name:'Giro EDT '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),start:Date.now(),pts:[],paused:false,elapsed:0,resumedAt:Date.now()};toast('Registrazione avviata');setFollow(true);startGPS()}
   else if(rec.paused){rec.paused=false;rec.resumedAt=Date.now();rec.pts.push(null);toast('Si riparte',1200)}
   else{rec.elapsed=elapsed();rec.paused=true;toast('In pausa',1200)}
-  store.set('edt_rec_live',rec);recUI();wake();
+  store.set('edt_rec_live',rec);recUI();wake();lockTip();
 };
 let stopArmed=false;
 $('stopBtn').onclick=()=>{
@@ -939,7 +939,7 @@ function setSharing(v){
   if(v&&!crew.name){toast('Scrivi il tuo nome prima di condividere');$('fName').focus();return}
   if(v&&!SERVER.startsWith('http')){toast('Servizio gruppo non ancora collegato');return}
   sharing=v;store.set('edt_share',v);
-  if(v){startGPS();ping(true);netUI();toast('Il gruppo '+crew.group+' ora ti vede')}
+  if(v){startGPS();ping(true);netUI();wake();lockTip();toast('Il gruppo '+crew.group+' ora ti vede')}
   else{sos=false;store.set('edt_sos',false);if(SERVER.startsWith('http'))fetch(SERVER+'?a=bye&id='+encodeURIComponent(crew.id)+'&g='+encodeURIComponent(crew.group)).catch(()=>{});clearRiders();setAlerts();toast('Posizione non più condivisa');netUI()}
   shareUI();
 }
@@ -1110,9 +1110,9 @@ function checkAlerts(){
 const dismissed={};
 function setAlerts(){
   const box=$('alerts');box.innerHTML='';
-  const fa=fuelAlert();(fa?[fa]:[]).concat(alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
+  const fa=fuelAlert(),la=lockAlert();(la?[la]:[]).concat(fa?[fa]:[],alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
     const el=document.createElement('div');el.className='alert'+(a.sos?' sos':'');
-    el.innerHTML=a.fuel?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="fgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Distributore</button><button data-a="full">Pieno fatto</button><button data-a="x">OK</button></div>`:a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
+    el.innerHTML=a.lock?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="x">OK</button></div>`:a.fuel?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="fgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Distributore</button><button data-a="full">Pieno fatto</button><button data-a="x">OK</button></div>`:a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
       :`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px">${a.sos?'<button data-a="reach" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Raggiungi</button>':''}<button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
     el.onclick=e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.a==='reach'){reach(a.id);return}
@@ -1121,7 +1121,7 @@ function setAlerts(){
       if(b.dataset.a==='full'){fuelReset();return}
       if(b.dataset.a==='rx'){pendRv='x';setRally(null);ping(true);toast('Ritrovo tolto per tutto il gruppo');return}
       if(b.dataset.a==='go'&&riders[a.id]){const d=riders[a.id].d;setFollow(false);const pp=[[d.lat,d.lon]];if(me)pp.push(me);fitPts(pp,16)}
-      if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;setAlerts()}};
+      if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;if(a.lock)lockAlertTxt=null;setAlerts()}};
     box.appendChild(el);
   });
 }
@@ -1263,6 +1263,7 @@ function renderReady(){
     t&&t.zone?['✅','Mappa senza campo','Zona salvata il '+new Date(t.zone).toLocaleDateString('it-IT',{day:'numeric',month:'short'})]:['⚠️','Mappa senza campo',zoneBusy?'Sto scaricando…':'Zona del giro non ancora salvata',t&&!zoneBusy?['Scarica',()=>{downloadZone(t,false);setTimeout(renderReady,300)}]:null],
     sharing&&crew.name?['✅','Gruppo',crew.name+(crew.no?' #'+crew.no:'')+' · gruppo '+crew.group+(crew.role?' · '+(crew.role==='A'?'apripista':'scopa'):'')]:['⚠️','Gruppo',crew.name?'Condivisione spenta':'Manca il tuo nome',['Attiva',()=>{if(crew.name)setSharing(true);else{openSheet();$('fName').scrollIntoView({block:'center'});$('fName').focus()}renderReady()}]],
     batt?(batt.level>=.6||batt.charging?['✅','Batteria',Math.round(batt.level*100)+'%'+(batt.charging?' · in carica':'')]:['⚠️','Batteria',Math.round(batt.level*100)+'%: carica il telefono o porta un powerbank']):['ℹ️','Batteria','Controlla che sia carica (o porta un powerbank)'],
+    'wakeLock' in navigator?(lock?['✅','Schermo acceso','Resta acceso da solo: non bloccare il telefono']:['⚠️','Schermo acceso','Non bloccare il telefono: il gruppo non ti vedrebbe',['Tienilo acceso',()=>{wake().then(()=>setTimeout(renderReady,300))}]]):['ℹ️','Schermo acceso','Alza lo spegnimento automatico dello schermo nelle impostazioni del telefono e non bloccarlo durante il giro'],
     S.saver?['✅','Risparmio batteria','Attivo']:['ℹ️','Risparmio batteria','Spento: consigliato per i giri lunghi',['Attiva',()=>{S.saver=true;saveS();$('sSaver').classList.add('on');applySaver()}]],
   ];
   rows.forEach(([ic,tt,sub,fix])=>{const el=document.createElement('div');el.className='item';
@@ -1270,6 +1271,16 @@ function renderReady(){
     if(fix)el.querySelector('button').onclick=fix[1];L.appendChild(el)});
 }
 $('readyOpen').onclick=()=>{startGPS();renderReady();showSheet('readySheet');setTimeout(()=>{if($('readySheet').classList.contains('open'))renderReady()},3000)};
+/* ---------- telefono bloccato: il gruppo non ti vede e il giro non registra ---------- */
+let hiddenAt=null,lockAlertTxt=null,lockTipShown=false;
+function lockTip(){if(lockTipShown)return;lockTipShown=true;setTimeout(()=>toast('📱 Tieni lo schermo acceso: col telefono bloccato il gruppo non ti vede',3800),2600)}
+function lockAlert(){return lockAlertTxt?{id:'_lock',lock:1,txt:lockAlertTxt}:null}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){if(sharing||rec)hiddenAt=Date.now();return}
+  if(!hiddenAt)return;const m=Math.round((Date.now()-hiddenAt)/60000);hiddenAt=null;
+  if(m>=1){lockAlertTxt=`📵 Telefono bloccato per ${m} min: ${sharing?'il gruppo non ti vedeva':''}${sharing&&rec?' e ':''}${rec?'il giro non si registrava':''}. Lascia lo schermo acceso`;
+    delete dismissed['_lock'+lockAlertTxt.split('·')[0]];buzz([200,100,200]);setAlerts()}
+});
 /* ---------- schermo acceso ---------- */
 let lock=null;
 async function wake(){try{if('wakeLock' in navigator&&!lock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
