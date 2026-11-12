@@ -111,6 +111,7 @@
       const keys = new Set(); pts.forEach(p => keys.add(lon2x(p[1]) + '/' + lat2y(p[0])));
       [...keys].slice(0, 80).forEach(ensure); return keys.size;
     },
+    loaded(keys) { return keys.filter(k => mem.has(k)).length; },
     collect(keys) {
       const f = []; keys.forEach(k => { const a = mem.get(k); if (a) f.push(...a); });
       return { type: 'FeatureCollection', features: f };

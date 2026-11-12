@@ -321,7 +321,7 @@ const ll=p=>[p[1],p[0]];                       // [lat,lon] -> [lon,lat]
 const v0=store.get('edt_view',[44.9,7.6,9]);
 const canRotate=true;
 const BASES=EDTMAP.BASES;
-const map=new maplibregl.Map({container:'map',style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
+const map=new maplibregl.Map({container:'map',pixelRatio:Math.min(window.devicePixelRatio||1,2),style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
   attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:65,fadeDuration:150});
 map.touchZoomRotate.disableRotation();
 map.on('load',()=>document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
@@ -335,7 +335,7 @@ map.on('style.load',()=>{
   map.addSource('gpxpts',{type:'geojson',data:EMPTY});
   map.addSource('rec',{type:'geojson',data:EMPTY});
   // grado di difficoltà delle sterrate (sopra la mappa, sotto le tracce)
-  map.addSource('grade',{type:'geojson',data:EMPTY});
+  map.addSource('grade',{type:'geojson',data:EMPTY,maxzoom:15,tolerance:.6,buffer:32});
   map.addLayer({id:'grade-case',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1e1408','line-width':['interpolate',['exponential',1.5],['zoom'],11,2.2,14,4.4,18,10]}});
   map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-opacity':['case',['has','s'],.75,1],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
@@ -355,16 +355,17 @@ function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false}
 const buildLayers=setBase;
 map.on('moveend',()=>{const c=map.getCenter();store.set('edt_view',[c.lat,c.lng,map.getZoom()]);refreshGrades()});
 // colori difficoltà: zona inquadrata
-let gradeKeys=[];
+let gradeKeys=[],gradeSig='';
 function refreshGrades(){
   if(!mapReady)return;
   const src=map.getSource('grade');if(!src)return;
-  if(!S.grades||map.getZoom()<11){src.setData(EMPTY);gradeInfo();return}
-  gradeKeys=EDTGRADE.view(map.getBounds());src.setData(EDTGRADE.collect(gradeKeys));gradeInfo();
+  if(!S.grades||map.getZoom()<11){if(gradeSig){gradeSig='';src.setData(EMPTY)}gradeInfo();return}
+  const keys=EDTGRADE.view(map.getBounds()),sig=keys.slice().sort().join('|')+'#'+EDTGRADE.loaded(keys);
+  gradeKeys=keys;if(sig!==gradeSig){gradeSig=sig;src.setData(EDTGRADE.collect(keys))}gradeInfo();
 }
 function gradeInfo(){const el=$('gradeInfo');if(!el)return;const st=EDTGRADE.status();
   el.textContent=!S.grades?'Spenti':map.getZoom()<11?'Avvicina la mappa per vederli':st.loading?'Scarico la zona… ('+st.loading+')':st.failed?'Niente rete: riprovo da solo':'Zona salvata sul telefono'}
-let gT=null;EDTGRADE.onChange(()=>{clearTimeout(gT);gT=setTimeout(()=>{if(mapReady&&S.grades)map.getSource('grade')?.setData(EDTGRADE.collect(gradeKeys));gradeInfo()},300)});
+let gT=null;EDTGRADE.onChange(()=>{clearTimeout(gT);gT=setTimeout(()=>{if(mapReady&&S.grades){const sig=gradeKeys.slice().sort().join('|')+'#'+EDTGRADE.loaded(gradeKeys);if(sig!==gradeSig){gradeSig=sig;map.getSource('grade')?.setData(EDTGRADE.collect(gradeKeys))}}gradeInfo()},300)});
 function boundsOf(points){const b=new maplibregl.LngLatBounds();points.forEach(p=>b.extend(ll(p)));return b}
 const PAD={top:170,bottom:120,left:30,right:30};
 function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:PAD,maxZoom:max||17,bearing:map.getBearing(),duration:600})}
