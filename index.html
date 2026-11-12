@@ -102,9 +102,22 @@ h3{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.12e
   border-radius:14px;padding:14px 18px;font-weight:700;max-width:86%;text-align:center;display:none}
 #toast.on{display:block}
 
-.me{width:26px;height:26px;position:relative}
-.me .ring{position:absolute;inset:3px;border-radius:50%;background:var(--yellow);border:3px solid #111;box-shadow:0 0 0 2px var(--yellow)}
-.me .cone{position:absolute;left:50%;top:-14px;width:0;height:0;margin-left:-8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:16px solid var(--yellow);transform-origin:8px 27px;display:none}
+.me{width:34px;height:34px;position:relative}
+.me .ring{position:absolute;inset:5px;border-radius:50%;background:var(--yellow);border:3px solid #111;box-shadow:0 0 0 3px var(--red),0 2px 8px rgba(0,0,0,.5)}
+.me .cone{position:absolute;inset:-6px;display:none;transition:transform .35s}
+.me .cone svg{width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,.55))}
+.me.dir .ring{display:none}
+.me .pulse{position:absolute;inset:-10px;border-radius:50%;border:3px solid var(--yellow);opacity:0;animation:mepulse 2.4s infinite}
+@keyframes mepulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+#splash{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#2a1d06,#0d0d0c 70%);transition:opacity .5s,visibility .5s}
+#splash.out{opacity:0;visibility:hidden}
+#splash .in{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px}
+#splash img{width:132px;height:132px;border-radius:28px;box-shadow:0 0 0 3px #e3261b,0 18px 50px rgba(255,210,31,.25);animation:pop .7s cubic-bezier(.2,1.6,.4,1)}
+#splash h1{margin:0;font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:.04em;color:#f4f1e8;line-height:1}
+#splash h1 em{font-style:normal;color:#ffd21f}
+#splash p{margin:0;font-family:var(--display);font-weight:600;font-size:20px;color:#ffd21f;letter-spacing:.02em}
+#splash small{color:#a39f93;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+@keyframes pop{0%{transform:scale(.3) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
 .me.dir .cone{display:block}
 .me .melbl{position:absolute;left:32px;top:1px;font-family:var(--display);font-weight:800;font-size:14px;background:#111;color:var(--yellow);border:2px solid var(--yellow);border-radius:6px;padding:0 6px;white-space:nowrap;line-height:1.35}
 .pin{font-family:var(--display);font-weight:800;font-size:12px;background:#111;color:var(--yellow);border:2px solid var(--yellow);border-radius:6px;padding:1px 5px;white-space:nowrap}
@@ -179,10 +192,11 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 .share{width:100%;min-height:56px;margin-top:10px;border-radius:14px;font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;background:var(--green);color:#111}
 .share.on{background:var(--panel2);color:var(--fg);border:2px solid var(--line)}
 .hint{font-size:13px;color:var(--muted);margin:6px 2px 0}
-@media (prefers-reduced-motion:reduce){#sheet,#arrow{transition:none}.alert.sos,.rider.sos .no,#sosBtn.active{animation:none}}
+@media (prefers-reduced-motion:reduce){#splash img,.me .pulse{animation:none}#sheet,#arrow{transition:none}.alert.sos,.rider.sos .no,#sosBtn.active{animation:none}}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="in"><img src="icon.svg" alt=""><h1>EDT <em>NAV</em></h1><p>Tranquilli, è un giro easy!</p><small>Enduro Drinking Team</small></div></div>
 <div id="map"></div>
 
 <div id="hud">
@@ -247,6 +261,8 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Nomi e strade sul satellite</div><button class="tog" id="sLabels" aria-label="Nomi sul satellite"></button></div>
   <h3>Guida</h3>
   <div class="row"><div class="t">Orientamento</div><div class="seg" id="sOrient"><button data-v="north">Nord su</button><button data-v="heading">Direzione</button></div></div>
+  <div class="row"><div class="t">Mappa inclinata in movimento<small>Vista 3D come i navigatori quando vai</small></div><button class="tog" id="sTilt" aria-label="Mappa inclinata"></button></div>
+  <div class="row"><div class="t">Montagne in 3D<small>Rilievo vero in rilievo (consuma più batteria)</small></div><button class="tog" id="sTerrain" aria-label="Montagne in 3D"></button></div>
   <div class="row"><div class="t">Zoom automatico<small>Vicino da fermo, più largo quando vai forte</small></div><button class="tog" id="sAutoZoom" aria-label="Zoom automatico"></button></div>
   <div class="row"><div class="t">Torna a seguirti dopo<small>Quando sposti la mappa col dito</small></div><div class="seg" id="sResume"><button data-v="0">Mai</button><button data-v="10">10 s</button><button data-v="20">20 s</button><button data-v="40">40 s</button></div></div>
   <div class="row"><div class="t">Allarme fuori traccia</div><div class="seg" id="sOff"><button data-v="30">30 m</button><button data-v="60">60 m</button><button data-v="100">100 m</button><button data-v="200">200 m</button></div></div>
@@ -295,7 +311,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:20,offRoute:60,
-  grades:true,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
+  grades:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -306,7 +322,7 @@ const v0=store.get('edt_view',[44.9,7.6,9]);
 const canRotate=true;
 const BASES=EDTMAP.BASES;
 const map=new maplibregl.Map({container:'map',style:EDTMAP.buildStyle(S),center:[v0[1],v0[0]],zoom:v0[2]||9,
-  attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,fadeDuration:150});
+  attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:65,fadeDuration:150});
 map.touchZoomRotate.disableRotation();
 map.on('load',()=>document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
 map.keyboard.disableRotation();
@@ -329,9 +345,12 @@ map.on('style.load',()=>{
   map.addLayer({id:'gpx-wpt',type:'circle',source:'gpxpts',filter:['==',['get','k'],'wpt'],paint:{'circle-radius':7,'circle-color':'#ffd21f','circle-stroke-color':'#111','circle-stroke-width':2}});
   map.addLayer({id:'gpx-se',type:'circle',source:'gpxpts',filter:['!=',['get','k'],'wpt'],paint:{'circle-radius':8,'circle-color':['match',['get','k'],'start','#2f9e44','#e3261b'],'circle-stroke-color':'#fff','circle-stroke-width':3}});
   map.addLayer({id:'gpx-lbl',type:'symbol',source:'gpxpts',layout:{'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':13,'text-offset':[0,1.2],'text-anchor':'top','text-allow-overlap':false},paint:{'text-color':'#111','text-halo-color':'#ffd21f','text-halo-width':2.5}});
+  if(!map.getSource('dem3d'))map.addSource('dem3d',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14});
+  applyTerrain();
   mapReady=true;
   if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades()}
 });
+function applyTerrain(){try{map.setTerrain(S.terrain&&map.getSource('dem3d')?{source:'dem3d',exaggeration:1.3}:null)}catch(e){}}
 function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
 const buildLayers=setBase;
 map.on('moveend',()=>{const c=map.getCenter();store.set('edt_view',[c.lat,c.lng,map.getZoom()]);refreshGrades()});
@@ -449,7 +468,8 @@ const st={speed:null,alt:null};          // valori per i riquadri dati
 let resumeT=null,manualZoomAt=0;
 function setFollow(v){
   follow=v;$('followBtn').classList.toggle('on',v);clearTimeout(resumeT);
-  if(v&&me)map.easeTo({center:ll(me),zoom:Math.max(map.getZoom(),15),bearing:camBearing(),duration:600});
+  if(v&&me){if(map.getZoom()<15)map.setZoom(15);camera(true)}
+  if(!v)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
 map.on('dragstart',e=>{if(!e.originalEvent)return;setFollow(false);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
@@ -463,7 +483,7 @@ function orient(){
 function coneUpdate(){
   if(!meMk)return;const el=meMk.getElement().querySelector('.me');
   el.classList.toggle('dir',heading!=null);
-  el.querySelector('.cone').style.transform=`rotate(${(heading||0)-map.getBearing()}deg)`;
+  el.querySelector('.cone').style.transform=`rotate(${(heading||0)-map.getBearing()}deg)`;el.querySelector('.pulse').style.display=lastKmh>4?'none':'';
   const n=(typeof crew!=='undefined'&&crew.name)?crew.name:'Tu',lb=el.querySelector('.melbl');if(lb.textContent!==n)lb.textContent=n;
 }
 const camBearing=()=>S.orient==='heading'&&follow&&heading!=null?heading:0;
@@ -486,15 +506,36 @@ function startGPS(){
     if(err.code===1){watchId=null}
   },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
 }
+// il pallino scivola dalla posizione vecchia alla nuova invece di saltare
+let gFrom=null,gTo=null,gT0=0,gRaf=0;
+function glide(pt){
+  if(!meMk)return;
+  const cur=meMk.getLngLat();gFrom=[cur.lat,cur.lng];gTo=pt;gT0=performance.now();
+  if(!gRaf)gRaf=requestAnimationFrame(gStep);
+}
+function gStep(t){
+  const k=Math.min(1,(t-gT0)/950),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+  meMk.setLngLat([gFrom[1]+(gTo[1]-gFrom[1])*e,gFrom[0]+(gTo[0]-gFrom[0])*e]);
+  gRaf=k<1?requestAnimationFrame(gStep):0;
+}
+// telecamera: inclinata e con il pilota in basso quando ti muovi, piatta da fermo
+let lastKmh=0;
+function camera(now){
+  if(!follow||!me)return;
+  const moving=lastKmh>4,tilt=S.tilt&&moving;
+  const h=map.getContainer().clientHeight;
+  map.easeTo({center:ll(me),bearing:camBearing(),pitch:tilt?55:0,padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},
+    zoom:(autoZoom(lastKmh)||map.getZoom()),duration:now?700:950,easing:x=>x});
+}
 function onPos(p){
   const c=p.coords,pt=[c.latitude,c.longitude];
   gdot(c.accuracy<=15?'ok':'weak');
   if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1)heading=c.heading;
   else if(me&&hav(me,pt)>8)heading=bearing(me,pt);
   me=pt;
-  if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="cone"></div><div class="ring"></div><div class="melbl"></div></div>';
+  if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="pulse"></div><div class="cone"><svg viewBox="0 0 46 46"><path d="M23 3 L40 40 L23 31 L6 40 Z" fill="#ffd21f" stroke="#111" stroke-width="3.5" stroke-linejoin="round"/><path d="M23 11 L23 29" stroke="#e3261b" stroke-width="3.5" stroke-linecap="round"/></svg></div><div class="ring"></div><div class="melbl"></div></div>';
     meMk=new maplibregl.Marker({element:el}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5;map.on('rotate',coneUpdate)}
-  meMk.setLngLat(ll(pt));
+  glide(pt);
   const kmh=c.speed!=null&&!isNaN(c.speed)?c.speed*3.6:(lastFix?hav(lastFix.pt,pt)/Math.max(1,(p.timestamp-lastFix.t)/1000)*3.6:0);
   st.speed=kmh<1?0:Math.round(kmh);
   if(c.altitude!=null)st.alt=Math.round(c.altitude);
@@ -508,7 +549,8 @@ function onPos(p){
       if(rec.pts.length%5===0)store.set('edt_rec_live',rec);
     }
   }
-  if(follow&&Date.now()-manualZoomAt>1500){const z=autoZoom(kmh);map.easeTo({center:ll(pt),bearing:camBearing(),zoom:z||map.getZoom(),duration:900})}
+  lastKmh=kmh;
+  if(follow&&Date.now()-manualZoomAt>1500)camera();
   updateNav();renderStats();
 }
 
@@ -780,7 +822,7 @@ function renderBases(){
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
 tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
-tog('sAutoZoom','autoZoom');tog('sContrast','contrast',applyTheme);
+tog('sAutoZoom','autoZoom');tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
@@ -797,6 +839,7 @@ $('layerBtn').onclick=()=>{renderBases();showSheet('mapSheet')};
 /* ---------- avvio ---------- */
 function gdot(c){const d=$('gpsdot');if(d)d.className=c}
 applyTheme();buildStats();
+setTimeout(()=>$('splash').classList.add('out'),1700);$('splash').onclick=()=>$('splash').classList.add('out');
 gpx.forEach(drawGpx);recalc();recUI();renderLists();startGPS();wake();
 if(rec)toast('Registrazione ripresa: '+rec.name,2600);
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
