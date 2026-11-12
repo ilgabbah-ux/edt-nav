@@ -847,10 +847,11 @@ function updateRiders(list){
   list.forEach(d=>{
     if(d.lat==null)return;seen.add(d.id);
     if(!riders[d.id]){const el=document.createElement('div');const r={el,mk:new maplibregl.Marker({element:el,anchor:'left',offset:[-15,0]}).setLngLat([d.lon,d.lat]).addTo(map)};
-      el.addEventListener('click',()=>{const x=r.d;toast(x.n+' · '+ago(x.ago)+(me?' · '+km(hav(me,[x.lat,x.lon])):''))});riders[d.id]=r}
+      el.addEventListener('click',()=>{const x=r.d;toast(x.n+' · '+ago(x.ago)+(me?' · '+km(hav(me,[x.lat,x.lon])):'')+' · tienilo premuto per raggiungerlo',2600)});let lpR=null;el.addEventListener('touchstart',()=>{lpR=setTimeout(()=>reach(d.id),650)},{passive:true});['touchend','touchmove','touchcancel'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(lpR),{passive:true}));el.addEventListener('contextmenu',ev=>{ev.preventDefault();reach(d.id)});riders[d.id]=r}
     const r=riders[d.id];r.d=d;r.mk.setLngLat([d.lon,d.lat]);r.el.innerHTML=riderIcon(d);
   });
   for(const id in riders)if(!seen.has(id)){riders[id].mk.remove();delete riders[id]}
+  reachFollow();
   checkAlerts();renderCrew();
 }
 // quanto è indietro: lungo la traccia attiva se c'è, altrimenti in linea d'aria
@@ -887,8 +888,9 @@ function setAlerts(){
   const box=$('alerts');box.innerHTML='';
   alertList.filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
     const el=document.createElement('div');el.className='alert'+(a.sos?' sos':'');
-    el.innerHTML=`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
+    el.innerHTML=`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px">${a.sos?'<button data-a="reach" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Raggiungi</button>':''}<button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
     el.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.a==='reach'){reach(a.id);return}
       if(b.dataset.a==='go'&&riders[a.id]){const d=riders[a.id].d;setFollow(false);const pp=[[d.lat,d.lon]];if(me)pp.push(me);fitPts(pp,16)}
       if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;setAlerts()}};
     box.appendChild(el);
@@ -902,8 +904,8 @@ function renderCrew(){
   Object.values(riders).sort((a,b)=>a.d.n.localeCompare(b.d.n)).forEach(({d})=>{
     const el=document.createElement('div');el.className='item';
     const dist=me?km(hav(me,[d.lat,d.lon])):'–';
-    el.innerHTML=`<div class="sw" style="background:${d.sos?'var(--red)':d.ago>180?'#8a877e':'#2fb8ff'}"></div><div style="min-width:0"><div class="name">${esc((d.no?d.no+' · ':'')+d.n)}</div><div class="meta">${dist} · ${ago(d.ago)}${d.sos?' · FERMO':''}</div></div><div class="acts"><button class="mini" data-a="go">Vedi</button></div>`;
-    el.onclick=()=>{setFollow(false);map.easeTo({center:[d.lon,d.lat],zoom:16});closeSheet()};
+    el.innerHTML=`<div class="sw" style="background:${d.sos?'var(--red)':d.ago>180?'#8a877e':'#2fb8ff'}"></div><div style="min-width:0"><div class="name">${esc((d.no?d.no+' · ':'')+d.n)}</div><div class="meta">${dist} · ${ago(d.ago)}${d.sos?' · FERMO':''}</div></div><div class="acts"><button class="mini" data-a="reach">Raggiungi</button><button class="mini" data-a="go">Vedi</button></div>`;
+    el.onclick=e=>{if(e.target.closest('[data-a=reach]')){closeSheet();reach(d.id);return}setFollow(false);map.easeTo({center:[d.lon,d.lat],zoom:16});closeSheet()};
     cl.appendChild(el);
   });
 }
@@ -947,6 +949,29 @@ cc.addEventListener('touchstart',e=>{clearTimeout(lpT);if(e.touches.length!==1)r
   lpT=setTimeout(()=>{lpDone=Date.now();try{navigator.vibrate&&navigator.vibrate(40)}catch(_){}pickPoint(map.unproject(lpXY))},650)},{passive:true});
 cc.addEventListener('touchmove',e=>{if(!lpT||!lpXY)return;const t=e.touches[0],r=cc.getBoundingClientRect();if(Math.hypot(t.clientX-r.left-lpXY[0],t.clientY-r.top-lpXY[1])>12){clearTimeout(lpT);lpT=null}},{passive:true});
 ['touchend','touchcancel'].forEach(ev=>cc.addEventListener(ev,()=>{clearTimeout(lpT);lpT=null},{passive:true}));
+let reachId=null,reachAt=null;
+async function reach(id){
+  const r=riders[id];if(!r){toast('Non lo vedo più sulla mappa');return}
+  if(!me){toast('Aspetto il tuo GPS…');startGPS();return}
+  const d=r.d;reachId=id;reachAt=[d.lat,d.lon];
+  dest={name:d.n,where:'Raggiungi '+d.n,pt:[d.lat,d.lon],rider:id};
+  setDest(dest);
+  toast('Calcolo la strada più veloce fino a '+d.n+'…',2500);
+  // 1° tentativo: strade (più veloce); se l'arrivo resta lontano da lui, rifaccio passando anche dagli sterrati
+  const prev=S.routeMode;S.routeMode='fast';
+  await calcRoute(false);
+  const t=gpx.find(x=>x.id==='route');
+  if(!t||hav(t.pts[t.pts.length-1],dest.pt)>150){S.routeMode='offh';await calcRoute(false)}
+  S.routeMode=prev;saveS();
+}
+// se chi devo raggiungere si sposta di più di 300 m, ricalcolo verso la sua nuova posizione
+function reachFollow(){
+  if(!reachId||!riders[reachId])return;
+  const t=gpx.find(x=>x.id==='route');if(!t||!t.dest||t.dest.rider!==reachId){reachId=null;return}
+  const d=riders[reachId].d;
+  if(hav(reachAt,[d.lat,d.lon])>300&&!routing){reachAt=[d.lat,d.lon];t.dest.pt=[d.lat,d.lon];dest=t.dest;S.routeMode=t.mode;lastReroute=Date.now();calcRoute(true)}
+  if(me&&hav(me,[d.lat,d.lon])<60){reachId=null;say('Hai raggiunto '+d.n);toast('Hai raggiunto '+d.n+' 🍺',3000)}
+}
 async function calcRoute(silent){
   if(!dest){toast('Scegli prima dove andare');return}
   if(routing)return;routing=true;
