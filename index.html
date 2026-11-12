@@ -448,7 +448,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 <script src="percorso.js?v=23"></script>
 <script src="musica.js?v=1"></script>
 <script>
-(()=>{
+(async()=>{
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -457,8 +457,30 @@ function bearing(a,b){const y=Math.sin(rad(b[1]-a[1]))*Math.cos(rad(b[0]));const
 const km=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?2:1)+' km';
 const fmtT=s=>{s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`:`${m}:${String(x).padStart(2,'0')}`};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
-  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){toast('Memoria piena: esporta e cancella qualche giro');return false}}};
+/* ---------- memoria sul telefono ----------
+   Impostazioni piccole in localStorage; tracce, giri registrati e scia in IndexedDB
+   (localStorage tiene solo ~5 MB: dopo qualche giro lungo si riempiva e i giri nuovi non si salvavano). */
+const HEAVY=new Set(['edt_gpx','edt_recs','edt_rec_live','edt_trail']);
+const mem=new Map(),dirty=new Set();let idbOk=false,flushT=null,dbP=null;
+function idb(){return dbP||(dbP=new Promise(res=>{try{const r=indexedDB.open('edt-nav-dati',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);r.onblocked=()=>res(null)}catch(e){res(null)}}))}
+function idbAll(){return idb().then(d=>d&&new Promise(res=>{try{const out=new Map(),q=d.transaction('kv').objectStore('kv').openCursor();q.onsuccess=()=>{const c=q.result;if(c){out.set(c.key,c.value);c.continue()}else res(out)};q.onerror=()=>res(null)}catch(e){res(null)}}))}
+function idbFlush(){clearTimeout(flushT);flushT=null;if(!dirty.size)return Promise.resolve(true);
+  const keys=[...dirty];dirty.clear();
+  return idb().then(d=>d&&new Promise(res=>{try{const tx=d.transaction('kv','readwrite'),os=tx.objectStore('kv');
+    keys.forEach(k=>{const v=mem.get(k);v==null?os.delete(k):os.put(v,k)});tx.oncomplete=()=>res(true);tx.onerror=tx.onabort=()=>{keys.forEach(k=>dirty.add(k));res(false)}}catch(e){keys.forEach(k=>dirty.add(k));res(false)}}))}
+{const got=await Promise.race([idbAll(),new Promise(r=>setTimeout(()=>r(null),3000))]);
+  idbOk=!!got;const moved=[];
+  for(const k of HEAVY){let v=got&&got.has(k)?got.get(k):undefined;
+    if(v===undefined){try{const ls=localStorage.getItem(k);if(ls){v=JSON.parse(ls);if(idbOk){dirty.add(k);moved.push(k)}}}catch(e){}}
+    if(v!==undefined)mem.set(k,v)}
+  if(idbOk&&moved.length)idbFlush().then(ok=>{if(ok)moved.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}})});
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}}
+const store={get(k,d){if(HEAVY.has(k)&&idbOk){const v=mem.get(k);return v==null?d:v}try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){
+    if(HEAVY.has(k)&&idbOk){mem.set(k,v);dirty.add(k);if(document.visibilityState!=='visible')idbFlush();else if(!flushT)flushT=setTimeout(idbFlush,1000);return true}
+    try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){toast('Memoria piena: esporta e cancella qualche giro');return false}}};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')idbFlush()});
+window.addEventListener('pagehide',()=>idbFlush());
 let tT;function toast(t,ms=2200){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),ms)}
 const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8ff','#2f5bff','#b06bff','#ffffff','#8a877e','#111111'];
 
