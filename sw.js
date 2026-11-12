@@ -1,5 +1,5 @@
 // EDT Nav: app sempre disponibile offline + mappe già viste salvate sul telefono
-const APP = 'edt-nav-app-v11';
+const APP = 'edt-nav-app-v12';
 const TILES = 'edt-nav-tiles-v1';
 const MAX_TILES = 8000; // mappe vettoriali e rilievo: qualche centinaio di MB al massimo
 const SHELL = ['./', './index.html', './mappa.js', './difficolta.js', './manifest.json', './icon-192.png', './icon-512.png',
@@ -20,18 +20,19 @@ async function trim() {
   const keys = await c.keys();
   for (let i = 0; i < keys.length - MAX_TILES; i++) await c.delete(keys[i]);
 }
-let trimT = null;
+let trimT = null, puts = 0;
+const tileCache = caches.open(TILES);
 
 self.addEventListener('fetch', e => {
   const u = e.request.url;
   if (e.request.method !== 'GET') return;
   if (isTile(u)) {
-    e.respondWith(caches.open(TILES).then(async c => {
+    e.respondWith(tileCache.then(async c => {
       const hit = await c.match(u);
       if (hit) return hit;
       try {
         const r = await fetch(e.request);
-        if (r.ok) { c.put(u, r.clone()); clearTimeout(trimT); trimT = setTimeout(trim, 5000); }
+        if (r.ok) { c.put(u, r.clone()); if (++puts % 300 === 0) { clearTimeout(trimT); trimT = setTimeout(trim, 20000); } }
         return r;
       } catch (err) { return new Response('', { status: 504 }); }
     }));

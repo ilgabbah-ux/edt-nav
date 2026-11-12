@@ -8,7 +8,7 @@
   const FONT_R = ['Noto Sans Regular'], FONT_B = ['Noto Sans Bold'];
   const DEM = {
     type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-    encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Rilievo: Mapzen Terrain Tiles'
+    encoding: 'terrarium', tileSize: 256, maxzoom: 12, attribution: 'Rilievo: Mapzen Terrain Tiles'
   };
 
   const PAL = {

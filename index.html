@@ -520,9 +520,15 @@ function gStep(t){
   gRaf=k<1?requestAnimationFrame(gStep):0;
 }
 // telecamera: inclinata e con il pilota in basso quando ti muovi, piatta da fermo
-let lastKmh=0;
+let lastKmh=0,touching=false,userAt=0,camPos=null,camTilt=null,camHead=null;
+['touchstart','pointerdown','wheel'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,()=>{touching=ev!=='wheel';userAt=Date.now()},{passive:true}));
+['touchend','touchcancel','pointerup'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,()=>{touching=false;userAt=Date.now()},{passive:true}));
 function camera(now){
   if(!follow||!me)return;
+  if(!now&&(touching||Date.now()-userAt<3000||map.isZooming()))return;
+  const tiltNow=S.tilt&&lastKmh>4;
+  if(!now&&camPos&&hav(camPos,me)<3&&camTilt===tiltNow&&camHead===heading)return;
+  camPos=me.slice();camTilt=tiltNow;camHead=heading;
   const moving=lastKmh>4,tilt=S.tilt&&moving;
   const h=map.getContainer().clientHeight;
   map.easeTo({center:ll(me),bearing:camBearing(),pitch:tilt?55:0,padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},
