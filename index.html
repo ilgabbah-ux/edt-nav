@@ -321,7 +321,7 @@ map.on('style.load',()=>{
   // grado di difficoltà delle sterrate (sopra la mappa, sotto le tracce)
   map.addSource('grade',{type:'geojson',data:EMPTY});
   map.addLayer({id:'grade-case',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1e1408','line-width':['interpolate',['exponential',1.5],['zoom'],11,2.2,14,4.4,18,10]}});
-  map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
+  map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-opacity':['case',['has','s'],.75,1],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
   map.addLayer({id:'gpx-line',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','width'],'line-opacity':['get','op']}});
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
