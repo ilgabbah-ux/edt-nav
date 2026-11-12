@@ -469,12 +469,12 @@ const st={speed:null,alt:null};          // valori per i riquadri dati
 let resumeT=null,manualZoomAt=0;
 function setFollow(v){
   follow=v;$('followBtn').classList.toggle('on',v);clearTimeout(resumeT);
-  if(v&&me){if(map.getZoom()<15)map.setZoom(15);camera(true)}
+  if(v&&me){userZoomed=false;azBand=null;if(map.getZoom()<13)map.setZoom(15);camera(true)}
   if(!v)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
-map.on('dragstart',e=>{if(!e.originalEvent)return;setFollow(false);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
-map.on('zoomstart',e=>{if(e.originalEvent)manualZoomAt=Date.now()});
+map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
+map.on('zoomstart',e=>{if(e.originalEvent){manualZoomAt=Date.now();userZoomed=true}});
 // mappa che gira con la direzione di marcia
 function orient(){
   if(!canRotate)return;
@@ -488,10 +488,12 @@ function coneUpdate(){
   const n=(typeof crew!=='undefined'&&crew.name)?crew.name:'Tu',lb=el.querySelector('.melbl');if(lb.textContent!==n)lb.textContent=n;
 }
 const camBearing=()=>S.orient==='heading'&&follow&&heading!=null?heading:0;
+let userZoomed=false,azBand=null;
 function autoZoom(kmh){
-  if(!S.autoZoom||!follow||Date.now()-manualZoomAt<20000)return;
-  const z=kmh<8?17:kmh<30?16:kmh<60?15:14;
-  return z;
+  if(!S.autoZoom||!follow||userZoomed||kmh<6)return;
+  const band=kmh<30?16:kmh<60?15:14;
+  if(band===azBand)return;          // cambia zoom solo quando cambi fascia di velocità
+  azBand=band;return band;
 }
 $('fitBtn').onclick=()=>{
   const ll=[];gpx.filter(t=>t.vis).forEach(t=>{t.pts.forEach(p=>ll.push([p[0],p[1]]));t.wpts.forEach(w=>ll.push([w.lat,w.lon]))});
@@ -521,7 +523,7 @@ function gStep(t){
 }
 // telecamera: inclinata e con il pilota in basso quando ti muovi, piatta da fermo
 let lastKmh=0,touching=false,userAt=0,camPos=null,camTilt=null,camHead=null;
-['touchstart','pointerdown','wheel'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,()=>{touching=ev!=='wheel';userAt=Date.now()},{passive:true}));
+['touchstart','pointerdown','wheel'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,e=>{touching=ev!=='wheel';userAt=Date.now();if(ev==='wheel'||(e.touches&&e.touches.length>1)){userZoomed=true;manualZoomAt=Date.now()}},{passive:true}));
 ['touchend','touchcancel','pointerup'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,()=>{touching=false;userAt=Date.now()},{passive:true}));
 function camera(now){
   if(!follow||!me)return;
