@@ -390,6 +390,14 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Zoom automatico<small>Vicino da fermo, più largo quando vai forte</small></div><button class="tog" id="sAutoZoom" aria-label="Zoom automatico"></button></div>
   <div class="row"><div class="t">Torna a seguirti dopo<small>Quando sposti la mappa col dito</small></div><div class="seg" id="sResume"><button data-v="0">Mai</button><button data-v="10">10 s</button><button data-v="20">20 s</button><button data-v="40">40 s</button></div></div>
   <div class="row"><div class="t">Allarme fuori traccia</div><div class="seg" id="sOff"><button data-v="30">30 m</button><button data-v="60">60 m</button><button data-v="100">100 m</button><button data-v="200">200 m</button></div></div>
+  <h3>Benzina</h3>
+  <div class="row"><div class="t">Autonomia con un pieno<small id="fuelInfo">Ti avvisa quando sei in riserva</small></div><div class="seg" id="sTank"><button data-v="0">Off</button><button data-v="100">100</button><button data-v="150">150</button><button data-v="200">200</button><button data-v="250">250</button><button data-v="300">300</button></div></div>
+  <div class="row"><div class="t">Avvisa in riserva da</div><div class="seg" id="sReserve"><button data-v="20">20 km</button><button data-v="30">30 km</button><button data-v="50">50 km</button></div></div>
+  <button class="wide-btn" id="fuelFull" style="margin-top:6px">⛽ Ho fatto il pieno</button>
+  <h3>Backup dei giri su Drive</h3>
+  <div class="row"><div class="t">Salva i giri registrati su Drive<small id="bkInfo">Archivio EDT, cartella "Giri EDT Nav"</small></div><button class="tog" id="sBackup" aria-label="Backup su Drive"></button></div>
+  <div class="form" style="grid-template-columns:1fr"><label>Codice archivio<input id="bkKey" type="password" autocomplete="off" placeholder="Te lo dà il Gabbah"></label></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="wide-btn" id="bkNow" style="margin:0">⬆️ Salva adesso</button><button class="wide-btn" id="bkRestore" style="margin:0">⬇️ Recupera da Drive</button></div>
   <h3>Schermo</h3>
   <div class="row"><div class="t">Risparmio batteria<small>Schermo più scuro, posizione al gruppo ogni 45 s, niente 3D</small></div><button class="tog" id="sSaver" aria-label="Risparmio batteria"></button></div>
   <div class="row"><div class="t">Tema</div><div class="seg" id="sTheme"><button data-v="dark">Scuro</button><button data-v="light">Chiaro</button><button data-v="auto">Auto</button></div></div>
@@ -486,7 +494,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -512,6 +520,7 @@ map.on('style.load',()=>{
   map.addSource('gpxpts',{type:'geojson',data:EMPTY});
   map.addSource('rec',{type:'geojson',data:EMPTY});
   map.addSource('trails',{type:'geojson',data:EMPTY});
+  map.addSource('fuel',{type:'geojson',data:EMPTY});
   // grado di difficoltà delle sterrate (sopra la mappa, sotto le tracce)
   map.addSource('grade',{type:'geojson',data:EMPTY,maxzoom:15,tolerance:.6,buffer:32});
   map.addLayer({id:'grade-case',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1e1408','line-width':['interpolate',['exponential',1.5],['zoom'],11,2.2,14,4.4,18,10]}});
@@ -524,13 +533,15 @@ map.on('style.load',()=>{
   map.addLayer({id:'gpx-hit',type:'line',source:'gpx',paint:{'line-color':'#000','line-width':40,'line-opacity':0.01}});
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
   map.addLayer({id:'rec-line',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':S.recColor,'line-width':S.recWidth}});
+  if(!map.hasImage('fuelic'))map.addImage('fuelic',fuelIcon(),{pixelRatio:2});
+  map.addLayer({id:'fuel',type:'symbol',source:'fuel',minzoom:10,layout:{'icon-image':'fuelic','icon-size':['interpolate',['linear'],['zoom'],10,.6,14,1],'icon-allow-overlap':true,'text-field':['step',['zoom'],'',13,['get','name']],'text-font':['Noto Sans Bold'],'text-size':11,'text-offset':[0,1.4],'text-anchor':'top','text-optional':true},paint:{'text-color':'#111','text-halo-color':'#fff','text-halo-width':2}});
   map.addLayer({id:'gpx-wpt',type:'circle',source:'gpxpts',filter:['==',['get','k'],'wpt'],paint:{'circle-radius':7,'circle-color':'#ffd21f','circle-stroke-color':'#111','circle-stroke-width':2}});
   map.addLayer({id:'gpx-se',type:'circle',source:'gpxpts',filter:['!=',['get','k'],'wpt'],paint:{'circle-radius':8,'circle-color':['match',['get','k'],'start','#2f9e44','#e3261b'],'circle-stroke-color':'#fff','circle-stroke-width':3}});
   map.addLayer({id:'gpx-lbl',type:'symbol',source:'gpxpts',layout:{'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':13,'text-offset':[0,1.2],'text-anchor':'top','text-allow-overlap':false},paint:{'text-color':'#111','text-halo-color':'#ffd21f','text-halo-width':2.5}});
   if(!map.getSource('dem3d'))map.addSource('dem3d',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14});
   applyTerrain();
   mapReady=true;
-  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails()}
+  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails();if(typeof drawFuel==='function')drawFuel()}
 });
 function applyTerrain(){try{map.setTerrain(S.terrain&&!S.saver&&map.getSource('dem3d')?{source:'dem3d',exaggeration:1.3}:null)}catch(e){}}
 function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
@@ -558,7 +569,7 @@ function parseGPX(txt,fallback){
   if(x.getElementsByTagName('parsererror').length) throw new Error('File GPX non valido');
   const name=(x.querySelector('metadata > name, trk > name, rte > name')||{}).textContent||fallback;
   const pts=[];
-  const grab=sel=>x.querySelectorAll(sel).forEach(p=>{const la=+p.getAttribute('lat'),lo=+p.getAttribute('lon');if(isFinite(la)&&isFinite(lo)){const e=p.querySelector('ele');pts.push([la,lo,e?+e.textContent:null])}});
+  const grab=sel=>x.querySelectorAll(sel).forEach(p=>{const la=+p.getAttribute('lat'),lo=+p.getAttribute('lon');if(isFinite(la)&&isFinite(lo)){const e=p.querySelector('ele'),tm=p.querySelector('time'),ts=tm?Date.parse(tm.textContent):NaN;pts.push(isFinite(ts)?[la,lo,e?+e.textContent:null,ts]:[la,lo,e?+e.textContent:null])}});
   grab('trkpt'); if(!pts.length) grab('rtept');
   const wpts=[...x.querySelectorAll('wpt')].map(w=>({lat:+w.getAttribute('lat'),lon:+w.getAttribute('lon'),name:(w.querySelector('name')||{}).textContent||''}));
   if(!pts.length&&!wpts.length) throw new Error('Nessun punto trovato nel file');
@@ -607,7 +618,7 @@ async function loadFiles(files){
       gpx.push(t);last=t;
     }catch(e){toast(f.name+': '+e.message,3000)}
   }
-  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts);if(!(navigator.connection&&navigator.connection.saveData))setTimeout(()=>downloadZone(last,true),2500)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast('Traccia caricata: '+last.name);updateNav()}
+  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts);if(!(navigator.connection&&navigator.connection.saveData))setTimeout(()=>downloadZone(last,true),2500);setTimeout(()=>fuelLoad(last,false),1200)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast('Traccia caricata: '+last.name);updateNav()}
 }
 $('loadBtn').onclick=()=>$('fileIn').click();
 $('fileIn').onchange=e=>{loadFiles([...e.target.files]);e.target.value=''};
@@ -638,7 +649,7 @@ $('stopBtn').onclick=()=>{
   if(!stopArmed){stopArmed=true;$('stopBtn').textContent='OK?';setTimeout(()=>{stopArmed=false;$('stopBtn').textContent='STOP'},3000);return}
   stopArmed=false;$('stopBtn').textContent='STOP';
   const pts=rec.pts.filter(Boolean);
-  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist))}
+  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500)}
   else toast('Giro troppo corto, non salvato');
   rec=null;store.set('edt_rec_live',null);recalc();recUI();renderLists();
 };
@@ -742,6 +753,7 @@ function onPos(p){
   if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1.5)heading=c.heading;
   else if(me&&hav(me,pt)>15&&c.accuracy<=20)heading=bearing(me,pt);
   me=pt;lastAcc=c.accuracy;
+  if(S.tank&&c.accuracy<=35){if(fuelPt){const d=hav(fuelPt,pt);if(d>5){if(d<800){fuel.km+=d/1000;if(Math.floor(fuel.km*2)!==Math.floor((fuel.km-d/1000)*2))store.set('edt_fuel',fuel);fuelCheck()}fuelPt=pt}}else fuelPt=pt}
   if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="pulse"></div><div class="cone"><svg viewBox="0 0 46 46"><path d="M23 3 L40 40 L23 31 L6 40 Z" fill="#ffd21f" stroke="#111" stroke-width="3.5" stroke-linejoin="round"/><path d="M23 11 L23 29" stroke="#e3261b" stroke-width="3.5" stroke-linecap="round"/></svg></div><div class="ring"></div><div class="melbl"></div></div>';
     meMk=new maplibregl.Marker({element:el}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5;map.on('rotate',coneUpdate)}
   fixV=c.speed!=null&&!isNaN(c.speed)?c.speed:0;fixH=heading;
@@ -977,7 +989,7 @@ async function downloadZone(t,auto){
   }
   if(sty.glyphs)['Noto Sans Regular','Noto Sans Bold'].forEach(f=>['0-255','256-511','8192-8447'].forEach(r=>urls.push(sty.glyphs.replace('{fontstack}',encodeURIComponent(f)).replace('{range}',r))));
   const list=[...new Set(urls)].slice(0,5000);
-  if(S.grades)EDTGRADE.along(t.pts);
+  if(S.grades)EDTGRADE.along(t.pts);fuelLoad(t,true);
   zoneBusy=true;$('zoneDl').classList.add('busy');
   let done=0,bad=0,i=0;
   const show=()=>{$('zoneDl').textContent='📥 Scarico la zona… '+Math.round(done/list.length*100)+'%'};show();
@@ -1098,13 +1110,15 @@ function checkAlerts(){
 const dismissed={};
 function setAlerts(){
   const box=$('alerts');box.innerHTML='';
-  alertList.filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
+  const fa=fuelAlert();(fa?[fa]:[]).concat(alertList).filter(a=>a.sos||!dismissed[a.id+a.txt.split('·')[0]]).slice(0,3).forEach(a=>{
     const el=document.createElement('div');el.className='alert'+(a.sos?' sos':'');
-    el.innerHTML=a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
+    el.innerHTML=a.fuel?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="fgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Distributore</button><button data-a="full">Pieno fatto</button><button data-a="x">OK</button></div>`:a.rally?`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px"><button data-a="rgo" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Vai</button><button data-a="rx">Togli</button><button data-a="x">OK</button></div>`
       :`<div>${esc(a.txt)}</div><div style="display:flex;gap:6px">${a.sos?'<button data-a="reach" style="background:var(--yellow);color:#111;border-color:var(--yellow)">Raggiungi</button>':''}<button data-a="go">Vedi</button>${a.sos?'':'<button data-a="x">OK</button>'}</div>`;
     el.onclick=e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.a==='reach'){reach(a.id);return}
       if(b.dataset.a==='rgo'&&rally){goRally();return}
+      if(b.dataset.a==='fgo'){fuelNearest();return}
+      if(b.dataset.a==='full'){fuelReset();return}
       if(b.dataset.a==='rx'){pendRv='x';setRally(null);ping(true);toast('Ritrovo tolto per tutto il gruppo');return}
       if(b.dataset.a==='go'&&riders[a.id]){const d=riders[a.id].d;setFollow(false);const pp=[[d.lat,d.lon]];if(me)pp.push(me);fitPts(pp,16)}
       if(b.dataset.a==='x'){dismissed[a.id+a.txt.split('·')[0]]=1;setAlerts()}};
@@ -1124,6 +1138,88 @@ function renderCrew(){
     cl.appendChild(el);
   });
 }
+/* ---------- benzina: autonomia, riserva e distributori ---------- */
+let fuel=store.get('edt_fuel',{km:0}),fuelPt=null,fuelWarned=false;
+function fuelLeft(){return S.tank-fuel.km}
+function fuelInfo(){$('fuelInfo').textContent=S.tank?'Ancora ~'+Math.max(0,Math.round(fuelLeft()))+' km · '+Math.round(fuel.km)+' km dall\'ultimo pieno':'Ti avvisa quando sei in riserva'}
+function fuelAlert(){if(!S.tank||fuelLeft()>S.reserve)return null;const l=Math.max(0,Math.round(fuelLeft()));return {id:'_fuel',fuel:1,txt:`⛽ Riserva · ancora ~${l} km`}}
+function fuelCheck(){const r=S.tank&&fuelLeft()<=S.reserve;if(r&&!fuelWarned){fuelWarned=true;buzz([300,150,300]);toast('⛽ Sei in riserva: ancora ~'+Math.max(0,Math.round(fuelLeft()))+' km',3500);setAlerts()}else if(!r&&fuelWarned){fuelWarned=false;setAlerts()}
+  if(r&&Math.round(fuelLeft())%5===0)setAlerts()}
+function fuelReset(){fuel={km:0,since:Date.now()};store.set('edt_fuel',fuel);fuelWarned=false;delete dismissed['_fuel⛽ Riserva '];setAlerts();fuelInfo();renderStats();toast('⛽ Pieno fatto: autonomia '+S.tank+' km',2200)}
+$('fuelFull').onclick=()=>{if(!S.tank){toast('Prima scegli l\'autonomia con un pieno',2500);return}fuelReset()};
+function fuelIcon(){const c=document.createElement('canvas');c.width=c.height=44;const g=c.getContext('2d');
+  g.fillStyle='#111';g.beginPath();g.arc(22,22,21,0,7);g.fill();g.fillStyle='#ffd21f';g.beginPath();g.arc(22,22,17,0,7);g.fill();
+  g.fillStyle='#111';g.fillRect(13,12,12,22);g.fillStyle='#ffd21f';g.fillRect(15,14,8,6);g.strokeStyle='#111';g.lineWidth=2.5;g.beginPath();g.moveTo(25,16);g.lineTo(30,20);g.lineTo(30,29);g.lineTo(33,29);g.lineTo(33,18);g.stroke();
+  return g.getImageData(0,0,44,44)}
+function drawFuel(){if(!mapReady||!map.getSource('fuel'))return;const seen=new Set(),f=[];
+  gpx.forEach(t=>(t.fuel||[]).forEach(p=>{const k=p[0].toFixed(4)+p[1].toFixed(4);if(seen.has(k))return;seen.add(k);f.push({type:'Feature',properties:{name:(p[2]||'')+(p[3]!=null?' · km '+p[3]:'')},geometry:{type:'Point',coordinates:[p[1],p[0]]}})}));
+  map.getSource('fuel').setData({type:'FeatureCollection',features:f})}
+const OVP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+async function overpassFuel(area){
+  const q=`[out:json][timeout:25];nwr["amenity"="fuel"](${area});out center 300;`;
+  for(const u of OVP){try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),25000);
+    const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ac.signal}).finally(()=>clearTimeout(to));
+    if(!r.ok)continue;const j=await r.json();
+    return (j.elements||[]).map(e=>{const la=e.lat??(e.center&&e.center.lat),lo=e.lon??(e.center&&e.center.lon),t=e.tags||{};return la==null?null:[+la.toFixed(5),+lo.toFixed(5),(t.brand||t.name||'Distributore').slice(0,24)]}).filter(Boolean)}catch(e){}}
+  return null}
+async function fuelLoad(t,quiet){
+  if(!t||(t.fuel&&t.fuelAt&&Date.now()-t.fuelAt<30*864e5)||!navigator.onLine)return;
+  let s=90,w=180,n=-90,e=-180;t.pts.forEach(p=>{s=Math.min(s,p[0]);n=Math.max(n,p[0]);w=Math.min(w,p[1]);e=Math.max(e,p[1])});
+  const r=await overpassFuel(`${(s-.03).toFixed(4)},${(w-.04).toFixed(4)},${(n+.03).toFixed(4)},${(e+.04).toFixed(4)}`);
+  if(!r)return;
+  // solo quelli vicini alla traccia (entro 2 km), con il km del giro a cui si trovano
+  const near=r.map(p=>{const q=nearest(t,p);return q.d<=2000?[p[0],p[1],p[2],Math.round(q.along/1000)]:null}).filter(Boolean).sort((a,b)=>a[3]-b[3]);
+  t.fuel=near;t.fuelAt=Date.now();saveGpx();drawFuel();
+  if(!quiet)toast(near.length?'⛽ '+near.length+(near.length>1?' distributori':' distributore')+' vicino al giro':'⛽ Nessun distributore vicino al giro',2800)}
+async function fuelNearest(){
+  if(!me){toast('Aspetto il tuo GPS…');startGPS();return}
+  let all=[];gpx.forEach(t=>(t.fuel||[]).forEach(p=>all.push(p)));
+  const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1),here=t?nearest(t,me):null;
+  const cost=p=>hav(me,p)+(here&&here.d<300&&p[3]!=null&&p[3]*1000<here.along-300?5000:0);   // quelli già passati pesano di più
+  all.sort((a,b)=>cost(a)-cost(b));
+  if(!all.length||hav(me,all[0])>25000){toast('Cerco i distributori vicini…',2000);const r=await overpassFuel(`around:20000,${me[0].toFixed(5)},${me[1].toFixed(5)}`);
+    if(r&&r.length){all=r.sort((a,b)=>hav(me,a)-hav(me,b))}}
+  if(!all.length){toast(navigator.onLine?'Nessun distributore trovato qui vicino':'Senza rete: carica la zona del giro prima di partire',3000);return}
+  const p=all[0];setDest({name:'⛽ '+p[2],where:'Distributore più vicino',pt:[p[0],p[1]]});
+  const prev=S.routeMode;S.routeMode='fast';await calcRoute(false);S.routeMode=prev;saveS();
+}
+/* ---------- backup dei giri su Drive ---------- */
+let bkBusy=false;const bkKey=()=>store.get('edt_bkkey','');
+$('bkKey').value=bkKey();$('bkKey').addEventListener('change',()=>{store.set('edt_bkkey',$('bkKey').value.trim());bkInfo();backupNow(false)});
+function bkName(r){const d=new Date(r.pts&&r.pts[0]&&r.pts[0][3]||+String(r.id).slice(1)||Date.now());const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}${p(d.getMinutes())} ${String(r.name||'Giro').replace(/[^\w\- àèéìòù]+/g,'_').slice(0,40)}.gpx`}
+function bkInfo(){const n=recs.filter(r=>r.bk).length,w=recs.length-n;
+  $('bkInfo').textContent=!S.backup?'Archivio EDT, cartella "Giri EDT Nav"':!bkKey()?'Scrivi il codice archivio qui sotto':bkBusy?'Salvo su Drive…':`${n} ${n===1?'giro':'giri'} su Drive`+(w?` · ${w} da salvare`:' · tutto salvato ✓')}
+async function bkCall(body){const r=await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'});return r.json()}
+async function backupNow(quiet){
+  if(!S.backup||bkBusy)return;
+  if(!bkKey()){if(!quiet)toast('Scrivi il codice archivio',2500);bkInfo();return}
+  if(!navigator.onLine){if(!quiet)toast('Senza rete: salvo appena torna il campo',2500);return}
+  const todo=recs.filter(r=>!r.bk&&r.pts&&r.pts.length>1);if(!todo.length){bkInfo();if(!quiet)toast('Tutti i giri sono già su Drive ✓');return}
+  bkBusy=true;bkInfo();let done=0,err='';
+  for(const r of todo){try{const j=await bkCall({a:'save',key:bkKey(),n:crew.name||'Senza nome',file:bkName(r),gpx:toGPX(r)});
+      if(j.ok){r.bk=Date.now();r.bkName=bkName(r);done++;store.set('edt_recs',recs)}else{err=j.error||'errore';break}}catch(e){err='rete';break}}
+  bkBusy=false;bkInfo();
+  if(err==='codice')toast('Codice archivio sbagliato',3000);else if(done&&!quiet)toast(done+(done>1?' giri salvati':' giro salvato')+' su Drive ✓',2500);else if(done)toast('Giro salvato anche su Drive ✓',2000);else if(err&&!quiet)toast('Backup non riuscito: riprovo più tardi',2500);
+}
+$('bkNow').onclick=()=>{if(!S.backup){S.backup=true;saveS();$('sBackup').classList.add('on')}backupNow(false)};
+$('bkRestore').onclick=async()=>{
+  if(!bkKey()){toast('Scrivi il codice archivio',2500);return}
+  if(!navigator.onLine){toast('Serve la rete',2000);return}
+  toast('Cerco i tuoi giri su Drive…',2500);
+  try{const j=await bkCall({a:'blist',key:bkKey(),n:crew.name||'Senza nome'});
+    if(!j.ok){toast(j.error==='codice'?'Codice archivio sbagliato':'Recupero non riuscito',3000);return}
+    const have=new Set(recs.map(r=>r.bkName).filter(Boolean));let added=0;
+    for(const f of j.files.filter(f=>!have.has(f.name))){
+      const g=await bkCall({a:'bget',key:bkKey(),id:f.id});if(!g.ok)continue;
+      try{const t=parseGPX(g.text,f.name.replace(/\.gpx$/i,''));const p=t.pts;if(p.length<2)continue;
+        const t0=p[0][3],t1=p[p.length-1][3];
+        recs.push({id:'r'+(t0||Date.now()+added),name:t.name,pts:p,time:t0&&t1?Math.round((t1-t0)/1000):0,dist:Math.round(trackLen(p)),gain:Math.round(gain(p)),bk:Date.now(),bkName:f.name});added++}catch(e){}}
+    recs.sort((a,b)=>String(b.id).localeCompare(String(a.id)));store.set('edt_recs',recs);renderLists();bkInfo();
+    toast(added?added+(added>1?' giri recuperati':' giro recuperato')+' da Drive ✓':'Nessun giro nuovo da recuperare',2800)}
+  catch(e){toast('Recupero non riuscito: riprova',2500)}};
+window.addEventListener('online',()=>setTimeout(()=>backupNow(true),3000));
+setTimeout(()=>backupNow(true),15000);
 /* ---------- messaggi veloci ---------- */
 const QM={PAUSA:'⏸ Pausa',BIVIO:'🔀 Aspetto al bivio',AVANTI:'➡️ Vado avanti',RIFORNIMENTO:'⛽ Rifornimento',BIRRA:'🍺 Birra!',OK:'👍 Tutto ok'};
 $('qmOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -1362,6 +1458,7 @@ const CARDS={
   gain:{l:'Salita',v:()=>rec?'+'+Math.round(gain(rec.pts.filter(Boolean)))+'<i>m</i>':'–'},
   head:{l:'Direzione',v:()=>heading==null?'–':DIRS[Math.round(heading/45)%8]},
   left:{l:'All\'arrivo',v:()=>st.left==null||!gpx.find(x=>x.id===active&&x.vis)?'–':(st.left/1000).toFixed(1)+'<i>km</i>'},
+  fuel:{l:'Benzina',v:()=>S.tank?Math.max(0,Math.round(fuelLeft()))+'<i>km</i>':'–'},
   none:{l:'—',v:()=>''}
 };
 let gainCache={n:-1,v:0};
@@ -1397,7 +1494,7 @@ function renderBases(){
 $('baseList').onclick=e=>{const b=e.target.closest('.mapopt');if(!b)return;S.base=b.dataset.k;saveS();renderBases();buildLayers()};
 $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS();buildLayers()};
 tog('sMtb','mtb',buildLayers);tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
-tog('sSaver','saver',applySaver);applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
+tog('sSaver','saver',applySaver);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
@@ -1409,7 +1506,7 @@ $('cardSel').querySelectorAll('select').forEach(s=>{s.value=S.cards[+s.dataset.i
 $('recSw').innerHTML=COLORS.map(c=>`<button class="swatch ${c===S.recColor?'on':''}" data-c="${c}" style="background:${c}" aria-label="Colore ${c}"></button>`).join('');
 $('recSw').onclick=e=>{const b=e.target.closest('.swatch');if(!b)return;S.recColor=b.dataset.c;saveS();styleRec();$('recSw').querySelectorAll('.swatch').forEach(s=>s.classList.toggle('on',s===b))};
 $('recW').value=S.recWidth;$('recW').oninput=()=>{S.recWidth=+$('recW').value;saveS();styleRec()};
-$('layerBtn').onclick=()=>{renderBases();showSheet('mapSheet')};
+$('layerBtn').onclick=()=>{renderBases();fuelInfo();bkInfo();showSheet('mapSheet')};
 
 /* ---------- avvio ---------- */
 function gdot(c){const d=$('gpsdot');if(d)d.className=c}
