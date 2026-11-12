@@ -208,6 +208,9 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
 .via{width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid #111;box-shadow:0 0 0 3px var(--yellow);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:12px;color:#111;cursor:grab}
 
 /* gruppo */
+#netPill{margin-top:6px;align-self:flex-start;display:inline-block;background:#2b2b2b;border:2px solid #777;color:#ddd;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px;pointer-events:none}
+#netPill[hidden]{display:none}
+#zoneDl.busy{border-color:var(--yellow);color:var(--yellow)}
 #alerts{display:flex;flex-direction:column;gap:6px;margin-top:6px;pointer-events:auto}
 .alert{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-radius:10px;padding:8px 10px;
   background:#4a3a00;border:2px solid var(--yellow);font-weight:700;font-size:15px}
@@ -252,6 +255,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
     <button id="navOff" aria-label="Spegni la navigazione">✕</button>
   </div>
   <div id="alerts"></div>
+  <div id="netPill" hidden>📡 Senza campo · il gruppo si aggiorna appena torna il segnale</div>
 </div>
 
 <button class="fab left" id="shareBtn" aria-label="Gruppo e posizione condivisa">
@@ -327,6 +331,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   </button>
   <button class="wide-btn" id="routeOpen" style="margin-top:8px">🧭 Naviga verso…</button>
   <button class="wide-btn" id="posShare" style="margin-top:8px">📍 Manda la mia posizione (WhatsApp…)</button>
+  <button class="wide-btn" id="zoneDl" style="margin-top:8px">📥 Scarica la zona del giro (per quando non c'è campo)</button>
   <input type="file" id="fileIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple hidden>
   <h3>Gruppo del giro</h3>
   <div class="form">
@@ -454,10 +459,14 @@ map.on('style.load',()=>{
   map.addSource('gpx',{type:'geojson',data:EMPTY});
   map.addSource('gpxpts',{type:'geojson',data:EMPTY});
   map.addSource('rec',{type:'geojson',data:EMPTY});
+  map.addSource('trails',{type:'geojson',data:EMPTY});
   // grado di difficoltà delle sterrate (sopra la mappa, sotto le tracce)
   map.addSource('grade',{type:'geojson',data:EMPTY,maxzoom:15,tolerance:.6,buffer:32});
   map.addLayer({id:'grade-case',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1e1408','line-width':['interpolate',['exponential',1.5],['zoom'],11,2.2,14,4.4,18,10]}});
   map.addLayer({id:'grade',type:'line',source:'grade',minzoom:11,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','g'],1,EDTGRADE.COLORS[1],2,EDTGRADE.COLORS[2],3,EDTGRADE.COLORS[3],4,EDTGRADE.COLORS[4],EDTGRADE.COLORS[5]],'line-opacity':['case',['has','s'],.75,1],'line-width':['interpolate',['exponential',1.5],['zoom'],11,1.2,14,2.6,18,6.5]}});
+  // dove sono passati gli amici mentre erano senza campo (arriva quando ritrovano il segnale)
+  map.addLayer({id:'trail-case',type:'line',source:'trails',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#111','line-width':6,'line-opacity':.6}});
+  map.addLayer({id:'trail',type:'line',source:'trails',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['case',['get','sos'],'#e3261b','#ffd21f'],'line-width':3,'line-dasharray':[1.5,1.5]}});
   map.addLayer({id:'gpx-case',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','casing'],'line-width':['+',['get','width'],4],'line-opacity':['*',['get','op'],.55]}});
   map.addLayer({id:'gpx-line',type:'line',source:'gpx',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','width'],'line-opacity':['get','op']}});
   map.addLayer({id:'gpx-hit',type:'line',source:'gpx',paint:{'line-color':'#000','line-width':40,'line-opacity':0.01}});
@@ -469,7 +478,7 @@ map.on('style.load',()=>{
   if(!map.getSource('dem3d'))map.addSource('dem3d',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14});
   applyTerrain();
   mapReady=true;
-  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades()}
+  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails()}
 });
 function applyTerrain(){try{map.setTerrain(S.terrain&&map.getSource('dem3d')?{source:'dem3d',exaggeration:1.3}:null)}catch(e){}}
 function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
@@ -806,7 +815,7 @@ function renderLists(){
     rl.appendChild(d);
   });
 }
-function openSheet(){renderLists();if(typeof renderCrew==='function')renderCrew();showSheet('sheet')}
+function openSheet(){renderLists();if(typeof zoneLabel==='function'&&!zoneBusy)zoneLabel();if(typeof renderCrew==='function')renderCrew();showSheet('sheet')}
 function showSheet(id){document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.toggle('open',s.id===id));$('scrim').classList.add('open')}
 function closeSheet(){document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.remove('open'));$('scrim').classList.remove('open')}
 $('tracksBtn').onclick=openSheet;$('closeSheet').onclick=closeSheet;$('scrim').onclick=closeSheet;
@@ -856,7 +865,7 @@ $('fName').value=crew.name;$('fNo').value=crew.no;$('fGroup').value=crew.group;$
   if(oldG!==crew.group){clearRiders();if(sharing)ping(true)}
 }));
 const ago=s=>s<60?'adesso':s<3600?Math.round(s/60)+' min fa':Math.round(s/3600)+' h fa';
-function clearRiders(){for(const id in riders){riders[id].mk.remove();delete riders[id]}renderCrew()}
+function clearRiders(){for(const id in riders){riders[id].mk.remove();delete riders[id]}renderCrew();if(typeof drawTrails==='function')drawTrails()}
 function shareUI(){
   $('shareBtn').classList.toggle('on',sharing);$('sosBtn').classList.toggle('on',sharing);$('sosBtn').classList.toggle('active',sos);
   $('sosBtn').innerHTML=sos?'TUTTO<br>OK':'IMPRE-<br>VISTO';$('sosOk').hidden=!sos;
@@ -866,8 +875,8 @@ function setSharing(v){
   if(v&&!crew.name){toast('Scrivi il tuo nome prima di condividere');$('fName').focus();return}
   if(v&&!SERVER.startsWith('http')){toast('Servizio gruppo non ancora collegato');return}
   sharing=v;store.set('edt_share',v);
-  if(v){startGPS();ping(true);toast('Il gruppo '+crew.group+' ora ti vede')}
-  else{sos=false;store.set('edt_sos',false);if(SERVER.startsWith('http'))fetch(SERVER+'?a=bye&id='+encodeURIComponent(crew.id)+'&g='+encodeURIComponent(crew.group)).catch(()=>{});clearRiders();setAlerts();toast('Posizione non più condivisa')}
+  if(v){startGPS();ping(true);netUI();toast('Il gruppo '+crew.group+' ora ti vede')}
+  else{sos=false;store.set('edt_sos',false);if(SERVER.startsWith('http'))fetch(SERVER+'?a=bye&id='+encodeURIComponent(crew.id)+'&g='+encodeURIComponent(crew.group)).catch(()=>{});clearRiders();setAlerts();toast('Posizione non più condivisa');netUI()}
   shareUI();
 }
 $('shareToggle').onclick=()=>setSharing(!sharing);
@@ -887,25 +896,93 @@ async function sharePos(motivo){
   location.href='https://wa.me/?text='+encodeURIComponent(text+' '+url);
 }
 $('posShare').onclick=()=>sharePos('');
+/* ---------- scarica la zona del giro: mappa, rilievo, colori delle sterrate e scritte ---------- */
+const tX=(lon,z)=>Math.floor((lon+180)/360*2**z),tY=(lat,z)=>{const r=rad(lat);return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z)};
+function zoneTiles(pts,z){
+  const lat=pts[0][0],size=40075016*Math.cos(rad(lat))/2**z,pad=Math.min(3,Math.ceil(1500/size));   // 1,5 km per lato
+  const out=new Set();let last=null;
+  for(const p of pts){if(last&&hav(last,p)<size/3)continue;last=p;
+    const x=tX(p[1],z),y=tY(p[0],z);for(let dx=-pad;dx<=pad;dx++)for(let dy=-pad;dy<=pad;dy++)out.add([z,x+dx,y+dy])}
+  return [...new Set([...out].map(String))].map(k=>k.split(',').map(Number));
+}
+var zoneBusy=false;
+function zoneLabel(){const t=gpx.find(x=>x.id===active);
+  $('zoneDl').textContent=t&&t.zone?'✅ Zona del giro salvata ('+new Date(t.zone).toLocaleDateString('it-IT',{day:'numeric',month:'short'})+') · riscarica':'📥 Scarica la zona del giro (per quando non c\'è campo)'}
+$('zoneDl').onclick=async()=>{
+  if(zoneBusy)return;
+  const t=gpx.find(x=>x.id===active&&x.pts.length>1)||gpx.find(x=>x.vis&&x.pts.length>1);
+  if(!t){toast('Carica prima la traccia del giro',2500);return}
+  if(!navigator.onLine){toast('Serve la rete: fallo a casa col wifi',2500);return}
+  const urls=[];const sty=map.getStyle();
+  for(const id in sty.sources){
+    const sd=sty.sources[id];if(!/^(vector|raster|raster-dem)$/.test(sd.type))continue;
+    if(id==='dem3d'&&!S.terrain)continue;
+    const src=map.getSource(id);const tiles=(src&&src.tiles)||sd.tiles;if(!tiles||!tiles.length)continue;
+    const maxz=Math.min(sd.type==='vector'?14:sd.type==='raster-dem'?12:15,(src&&src.maxzoom)||sd.maxzoom||22);
+    for(let z=9;z<=maxz;z++)for(const [zz,x,y] of zoneTiles(t.pts,z))urls.push(tiles[(x+y)%tiles.length].replace('{z}',zz).replace('{x}',x).replace('{y}',y));
+  }
+  if(sty.glyphs)['Noto Sans Regular','Noto Sans Bold'].forEach(f=>['0-255','256-511','8192-8447'].forEach(r=>urls.push(sty.glyphs.replace('{fontstack}',encodeURIComponent(f)).replace('{range}',r))));
+  const list=[...new Set(urls)].slice(0,5000);
+  if(S.grades)EDTGRADE.along(t.pts);
+  zoneBusy=true;$('zoneDl').classList.add('busy');
+  let done=0,bad=0,i=0;
+  const show=()=>{$('zoneDl').textContent='📥 Scarico la zona… '+Math.round(done/list.length*100)+'%'};show();
+  const worker=async()=>{while(i<list.length){const u=list[i++];
+    try{const r=await fetch(u,{mode:'cors'});if(!r.ok&&r.status!==404&&r.status!==204)bad++}catch(e){bad++}
+    done++;if(done%10===0)show()}};
+  await Promise.all(Array.from({length:6},worker));
+  zoneBusy=false;$('zoneDl').classList.remove('busy');
+  if(bad>list.length*.2){toast('Scaricata solo in parte: riprova con una rete migliore',3200);zoneLabel();return}
+  t.zone=Date.now();saveGpx();zoneLabel();
+  toast('Zona del giro salvata sul telefono ✓ ('+list.length+' pezzi di mappa)',3200);
+};
 $('sosShare').onclick=()=>sharePos(SOSTXT[sosR]||'🆘 Imprevisto');
 $('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet()};
 $('sosOk').onclick=()=>{setSos(false);closeSheet()};
 function setSos(v){sos=v;store.set('edt_sos',v);shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}
 
+// senza campo: tengo da parte dove passo, e quando torna il segnale lo mando al gruppo
+let trail=store.get('edt_trail',[]);
+function trailAdd(){
+  if(!me)return;const l=trail[trail.length-1];
+  if(l&&hav([l[0],l[1]],me)<60)return;
+  trail.push([+me[0].toFixed(5),+me[1].toFixed(5),Date.now()]);if(trail.length>400)trail=trail.filter((p,i)=>i%2===0||i>trail.length-50);
+  store.set('edt_trail',trail);
+}
+function trailParam(){
+  let t=trail.filter(p=>Date.now()-p[2]<45*60000);
+  while(t.length>40)t=t.filter((p,i)=>i%2===0||i===t.length-1);
+  return t.map(p=>p[0]+','+p[1]+','+Math.round((Date.now()-p[2])/1000)).join(';');
+}
+function netUI(){$('netPill').hidden=!(sharing&&(netFail>=2||!navigator.onLine))}
 async function ping(force){
   if(!sharing||pinging||!SERVER.startsWith('http'))return;
   if(!force&&Date.now()-lastPing<14000)return;
+  if(!navigator.onLine){netFail=Math.max(netFail,2);trailAdd();netUI();return}
   pinging=true;lastPing=Date.now();
   const q=new URLSearchParams({a:'ping',id:crew.id,g:crew.group,n:crew.name,no:crew.no,sos:sos?'1':'0',r:sos?sosR:''});
   if(me){q.set('lat',me[0].toFixed(6));q.set('lon',me[1].toFixed(6));if(heading!=null)q.set('h',Math.round(heading));q.set('s',st.speed||0)}
+  const sent=trail.length;if(sent)q.set('tr',trailParam());
   try{
-    const r=await fetch(SERVER+'?'+q,{redirect:'follow',cache:'no-store'});
+    const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);
+    const r=await fetch(SERVER+'?'+q,{redirect:'follow',cache:'no-store',signal:ac.signal}).finally(()=>clearTimeout(to));
     const j=await r.json();
     if(!j.ok)throw new Error(j.error);
-    netFail=0;updateRiders(j.riders||[]);
-  }catch(e){if(++netFail===3)toast('Niente rete: riprovo da solo',2500)}
+    if(sent){trail=trail.slice(sent);store.set('edt_trail',trail)}
+    netFail=0;netUI();updateRiders(j.riders||[]);
+  }catch(e){netFail++;trailAdd();netUI()}
   finally{pinging=false}
 }
+function drawTrails(){
+  if(!mapReady||!map.getSource('trails'))return;
+  const f=[];
+  for(const id in riders){const d=riders[id].d;if(!d.tr||!d.tr.length)continue;
+    const c=d.tr.map(p=>[p[1],p[0]]);c.push([d.lon,d.lat]);
+    if(c.length>1)f.push({type:'Feature',properties:{sos:!!d.sos},geometry:{type:'LineString',coordinates:c}})}
+  map.getSource('trails').setData({type:'FeatureCollection',features:f});
+}
+window.addEventListener('offline',()=>{netUI()});
+window.addEventListener('online',()=>{ping(true)});
 function riderIcon(d){
   const cls=d.sos?'sos':d.ago>180?'stale':'';
   return `<div class="rider ${cls}"><div class="no">${esc(d.no||d.n.slice(0,2).toUpperCase())}</div><div class="lbl">${esc(d.n)}${d.ago>180?' · '+ago(d.ago):''}</div></div>`;
@@ -919,7 +996,7 @@ function updateRiders(list){
     const r=riders[d.id];r.d=d;r.mk.setLngLat([d.lon,d.lat]);r.el.innerHTML=riderIcon(d);
   });
   for(const id in riders)if(!seen.has(id)){riders[id].mk.remove();delete riders[id]}
-  reachFollow();
+  reachFollow();drawTrails();
   checkAlerts();renderCrew();
 }
 // quanto è indietro: lungo la traccia attiva se c'è, altrimenti in linea d'aria
