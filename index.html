@@ -23,7 +23,11 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);overflow:hidden;overscroll-behavior:none}
-#map{position:fixed;inset:0;background:#1d1c19}
+#map{position:fixed;inset:0;background:#1d1c19;touch-action:none}
+/* un dito sulla mappa non deve far scorrere la pagina né nascondere la barra di Chrome (ridimensionerebbe la mappa a ogni movimento) */
+html,body{position:fixed;inset:0;width:100%;touch-action:none}
+.maplibregl-canvas-container,.maplibregl-canvas{touch-action:none!important}
+#sheet,.sheet{touch-action:pan-y}
 .maplibregl-ctrl-attrib{font-size:9px}
 .maplibregl-ctrl-bottom-right{bottom:calc(env(safe-area-inset-bottom,0px) + 160px)}
 
