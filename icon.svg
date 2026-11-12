@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0d0d0c"/>
-  <path d="M70 360 C150 360 150 230 250 230 S350 120 440 120" fill="none" stroke="#e3261b" stroke-width="34" stroke-linecap="round"/>
-  <path d="M70 360 C150 360 150 230 250 230 S350 120 440 120" fill="none" stroke="#ffd21f" stroke-width="12" stroke-linecap="round" stroke-dasharray="2 30"/>
-  <circle cx="440" cy="120" r="30" fill="#ffd21f" stroke="#0d0d0c" stroke-width="10"/>
-  <text x="256" y="455" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="104" fill="#f4f1e8" letter-spacing="6">EDT</text>
-</svg>
