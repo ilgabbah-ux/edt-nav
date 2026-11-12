@@ -81,7 +81,8 @@
   const queue = []; let busy = false; let onChange = () => {};
   let status = { loading: 0, failed: 0 };
   async function ensure(key) {
-    if (mem.has(key)) return;
+    if (mem.has(key)) { const v = mem.get(key); mem.delete(key); mem.set(key, v); return; }
+    if (mem.size > 90) { const old = mem.keys().next().value; mem.delete(old); }
     const c = await getT(key);
     if (c && Date.now() - c.t < TTL) { mem.set(key, c.f); onChange(); return; }
     if (c) mem.set(key, c.f);       // vecchio ma meglio di niente, lo aggiorno

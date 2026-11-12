@@ -412,8 +412,6 @@ function refreshGpx(){
     }
     t.wpts.forEach(w=>pts.push({type:'Feature',properties:{k:'wpt',label:w.name||''},geometry:{type:'Point',coordinates:[w.lon,w.lat]}}));
   });
-  // la traccia attiva sopra le altre
-  lines.sort((a,b)=>0);
   map.getSource('gpx')?.setData({type:'FeatureCollection',features:lines});
   map.getSource('gpxpts')?.setData({type:'FeatureCollection',features:pts});
 }
@@ -438,7 +436,7 @@ let rec=store.get('edt_rec_live',null); // {name,start,pts,paused,elapsed,resume
 let recs=store.get('edt_recs',[]);
 function styleRec(){if(!mapReady)return;map.setPaintProperty('rec-line','line-color',S.recColor);map.setPaintProperty('rec-line','line-width',S.recWidth);map.setPaintProperty('rec-case','line-width',S.recWidth+4)}
 function setRecLine(ps){if(!mapReady)return;map.getSource('rec')?.setData(ps.length>1?{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:ps.map(ll)}}:EMPTY)}
-let recDist=0;
+let recDist=0,recDrawAt=0;
 function recalc(){const ps=rec?rec.pts.filter(Boolean):[];recDist=trackLen(ps);setRecLine(ps)}
 function elapsed(){if(!rec)return 0;return rec.elapsed+(rec.paused?0:(Date.now()-rec.resumedAt)/1000)}
 function recUI(){
@@ -539,8 +537,8 @@ function camera(now){
 function onPos(p){
   const c=p.coords,pt=[c.latitude,c.longitude];
   gdot(c.accuracy<=15?'ok':'weak');
-  if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1)heading=c.heading;
-  else if(me&&hav(me,pt)>8)heading=bearing(me,pt);
+  if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1.5)heading=c.heading;
+  else if(me&&hav(me,pt)>15&&c.accuracy<=20)heading=bearing(me,pt);
   me=pt;
   if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="pulse"></div><div class="cone"><svg viewBox="0 0 46 46"><path d="M23 3 L40 40 L23 31 L6 40 Z" fill="#ffd21f" stroke="#111" stroke-width="3.5" stroke-linejoin="round"/><path d="M23 11 L23 29" stroke="#e3261b" stroke-width="3.5" stroke-linecap="round"/></svg></div><div class="ring"></div><div class="melbl"></div></div>';
     meMk=new maplibregl.Marker({element:el}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5;map.on('rotate',coneUpdate)}
@@ -551,11 +549,11 @@ function onPos(p){
   lastFix={pt,t:p.timestamp};
   coneUpdate();
   if(rec&&!rec.paused&&c.accuracy<=35){
-    const prev=[...rec.pts].reverse().find(Boolean);
+    let prev=null;for(let i=rec.pts.length-1;i>=0;i--){if(rec.pts[i]){prev=rec.pts[i];break}if(i<rec.pts.length-2)break}
     if(!prev||hav(prev,pt)>=4){rec.pts.push([+pt[0].toFixed(7),+pt[1].toFixed(7),c.altitude!=null?Math.round(c.altitude*10)/10:null,p.timestamp]);
       if(prev)recDist+=hav(prev,pt);
-      setRecLine(rec.pts.filter(Boolean));
-      if(rec.pts.length%5===0)store.set('edt_rec_live',rec);
+      if(Date.now()-recDrawAt>4000){recDrawAt=Date.now();setRecLine(rec.pts.filter(Boolean))}
+      if(rec.pts.length%10===0)store.set('edt_rec_live',rec);
     }
   }
   lastKmh=kmh;
@@ -575,15 +573,21 @@ function nearest(t,p){
   }
   return best;
 }
+let wasOff=false;
 function updateNav(){
   const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1),nb=$('navbar');
   if(!t){nb.classList.remove('on');return}
   nb.classList.add('on');
   const total=cumul(t).at(-1);
   if(!me){$('navtxt').innerHTML=esc(km(total))+' <span>'+esc(t.name)+' · attendo il GPS</span>';$('navpct').textContent='';return}
-  const n=nearest(t,me),left=Math.max(0,total-n.along),off=n.d>S.offRoute;
+  const n=nearest(t,me),left=Math.max(0,total-n.along),far=n.d>1500,off=n.d>S.offRoute&&!far;
   st.left=left;
   nb.classList.toggle('off',off);
+  if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}}
+  wasOff=off;
+  if(far){const a=t.pts[n.i-1],b=t.pts[n.i],tg=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u],br0=bearing(me,tg);
+    $('arrow').style.transform=`rotate(${heading!=null?br0-heading:br0}deg)`;
+    $('navtxt').innerHTML='Traccia a '+esc(km(n.d))+' <span>'+esc(t.name)+' · segui la freccia</span>';$('navpct').textContent='';return}
   let target;
   if(off){const a=t.pts[n.i-1],b=t.pts[n.i];target=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u]}
   else{let j=n.i;while(j<t.pts.length-1&&cumul(t)[j]-n.along<40)j++;target=t.pts[j]}
@@ -603,7 +607,7 @@ function renderLists(){
       <div class="acts"><button class="mini ${t.id===active?'on':''}" data-a="nav">${t.id===active?'Attiva':'Segui'}</button><button class="mini ${t.vis?'on':''}" data-a="vis">${t.vis?'👁':'—'}</button><button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
     d.onclick=e=>{const a=e.target.closest('button')?.dataset.a;if(!a){fitTo(t);closeSheet();return}
       if(a==='edit'){openEdit(t,'gpx');return}
-      if(a==='nav'){active=t.id;t.vis=true;fitTo(t);closeSheet()}
+      if(a==='nav'){if(active===t.id){active=null;toast('Navigazione spenta',1200)}else{active=t.id;t.vis=true;fitTo(t);closeSheet()}}
       if(a==='vis'){t.vis=!t.vis;if(!t.vis&&active===t.id)active=null}
       if(a==='del'){if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent='Sicuro?';return}gpx=gpx.filter(x=>x!==t);if(active===t.id)active=null}
       saveGpx();gpx.forEach(drawGpx);renderLists();updateNav()};
@@ -781,7 +785,7 @@ shareUI();if(sharing)ping(true);
 /* ---------- schermo acceso ---------- */
 let lock=null;
 async function wake(){try{if('wakeLock' in navigator&&!lock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(rec)store.set('edt_rec_live',rec)}else if(rec)store.set('edt_rec_live',rec)});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(rec)recalc();if(rec)store.set('edt_rec_live',rec)}else if(rec)store.set('edt_rec_live',rec)});
 window.addEventListener('pagehide',()=>{if(rec)store.set('edt_rec_live',rec)});
 
 /* ---------- riquadri dati ---------- */
