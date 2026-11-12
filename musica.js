@@ -17,7 +17,7 @@
     ['euro-zero-inferno', 'Euro Zero Inferno'], ['ti-fa-male-la-gamba', 'Ti fa male la gamba?'],
     ['re-dell-ignoranza-4x4', "I Re dell'ignoranza 4x4"], ['halloween-trial-team-night', 'Halloween (Trial Team Night)'], ['disgelo-dance', 'Disgelo Dance'],
     ['ansia-da-colonnina', 'Ansia da colonnina'], ['quanto-costa', 'Quanto costa?'],
-    ['bollo-addio', 'Bollo addio! Pieno porco dio!'], ['lultimo-e-poi-andiamo', "L'ultimo e poi andiamo!"], ['da-domani', 'Da domani'],
+    ['bollo-addio', 'Bollo addio! Pieno porco dio!'], ['lultimo-e-poi-andiamo', "L'ultimo e poi andiamo!"], 
     ['mirco-vs-miti', 'Mirco vs Miti'], ['purcello-vs-paletta', 'Purcello vs Paletta'], ['angelo', 'Angelo'],
     ['costa-gay', 'Costa Gay'], ['mirco-e-gabbah-fest-edition', 'Mirco e Gabbah Fest Edition'],
     ['all-i-want-for-xmas-is-edt', 'All I Want for Xmas Is EDT'],
