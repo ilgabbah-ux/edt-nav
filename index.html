@@ -399,6 +399,7 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="form" style="grid-template-columns:1fr"><label>Codice archivio<input id="bkKey" type="password" autocomplete="off" placeholder="Te lo dà il Gabbah"></label></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="wide-btn" id="bkNow" style="margin:0">⬆️ Salva adesso</button><button class="wide-btn" id="bkRestore" style="margin:0">⬇️ Recupera da Drive</button></div>
   <h3>Schermo</h3>
+  <div class="row"><div class="t">Schermo sempre acceso<small>Mentre condividi col gruppo o registri il telefono non si blocca da solo</small></div><button class="tog" id="sAwake" aria-label="Schermo sempre acceso"></button></div>
   <div class="row"><div class="t">Risparmio batteria<small>Schermo più scuro, posizione al gruppo ogni 45 s, niente 3D</small></div><button class="tog" id="sSaver" aria-label="Risparmio batteria"></button></div>
   <div class="row"><div class="t">Tema</div><div class="seg" id="sTheme"><button data-v="dark">Scuro</button><button data-v="light">Chiaro</button><button data-v="auto">Auto</button></div></div>
   <div class="row"><div class="t">Alto contrasto</div><button class="tog" id="sContrast" aria-label="Alto contrasto"></button></div>
@@ -411,6 +412,13 @@ input[type=range]{width:150px;accent-color:var(--yellow);height:34px}
   <div class="row"><div class="t">Spessore</div><input type="range" id="recW" min="2" max="14" step="1"></div>
 </section>
 
+<section class="sheet" id="awakeSheet" aria-label="Schermo acceso">
+  <div class="sheet-h"><h2>Schermo <em>sempre acceso?</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <p style="margin:0 0 8px;line-height:1.45">Durante il giro EDT Nav può tenere lo <b>schermo acceso</b> e impedire che il telefono si blocchi da solo.</p>
+  <p class="hint" style="margin-top:0">Se il telefono si blocca, il gruppo non ti vede più e il giro non si registra. Consuma un po' più di batteria: se non hai il caricatore sulla moto attiva anche il risparmio batteria. Puoi cambiare idea quando vuoi nelle impostazioni.</p>
+  <button class="wide-btn go" id="awakeYes">☀️ Sì, tienilo acceso durante il giro</button>
+  <button class="wide-btn" id="awakeNo">No, lo gestisco io</button>
+</section>
 <section class="sheet" id="readySheet" aria-label="Pronto per il giro">
   <div class="sheet-h"><h2>Pronto per il <em>giro?</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <p class="hint" style="margin-top:0">Controlla tutto prima di partire. Se c'è qualcosa in giallo, sistemalo col tasto a destra.</p>
@@ -494,7 +502,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -642,7 +650,7 @@ $('recBtn').onclick=()=>{
   if(!rec){const d=new Date();rec={name:'Giro EDT '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),start:Date.now(),pts:[],paused:false,elapsed:0,resumedAt:Date.now()};toast('Registrazione avviata');setFollow(true);startGPS()}
   else if(rec.paused){rec.paused=false;rec.resumedAt=Date.now();rec.pts.push(null);toast('Si riparte',1200)}
   else{rec.elapsed=elapsed();rec.paused=true;toast('In pausa',1200)}
-  store.set('edt_rec_live',rec);recUI();wake();lockTip();
+  store.set('edt_rec_live',rec);recUI();if(!askAwake()){wake();lockTip()}
 };
 let stopArmed=false;
 $('stopBtn').onclick=()=>{
@@ -939,7 +947,7 @@ function setSharing(v){
   if(v&&!crew.name){toast('Scrivi il tuo nome prima di condividere');$('fName').focus();return}
   if(v&&!SERVER.startsWith('http')){toast('Servizio gruppo non ancora collegato');return}
   sharing=v;store.set('edt_share',v);
-  if(v){startGPS();ping(true);netUI();wake();lockTip();toast('Il gruppo '+crew.group+' ora ti vede')}
+  if(v){startGPS();ping(true);netUI();if(!askAwake()){wake();lockTip()}toast('Il gruppo '+crew.group+' ora ti vede')}
   else{sos=false;store.set('edt_sos',false);if(SERVER.startsWith('http'))fetch(SERVER+'?a=bye&id='+encodeURIComponent(crew.id)+'&g='+encodeURIComponent(crew.group)).catch(()=>{});clearRiders();setAlerts();toast('Posizione non più condivisa');netUI()}
   shareUI();
 }
@@ -1263,7 +1271,7 @@ function renderReady(){
     t&&t.zone?['✅','Mappa senza campo','Zona salvata il '+new Date(t.zone).toLocaleDateString('it-IT',{day:'numeric',month:'short'})]:['⚠️','Mappa senza campo',zoneBusy?'Sto scaricando…':'Zona del giro non ancora salvata',t&&!zoneBusy?['Scarica',()=>{downloadZone(t,false);setTimeout(renderReady,300)}]:null],
     sharing&&crew.name?['✅','Gruppo',crew.name+(crew.no?' #'+crew.no:'')+' · gruppo '+crew.group+(crew.role?' · '+(crew.role==='A'?'apripista':'scopa'):'')]:['⚠️','Gruppo',crew.name?'Condivisione spenta':'Manca il tuo nome',['Attiva',()=>{if(crew.name)setSharing(true);else{openSheet();$('fName').scrollIntoView({block:'center'});$('fName').focus()}renderReady()}]],
     batt?(batt.level>=.6||batt.charging?['✅','Batteria',Math.round(batt.level*100)+'%'+(batt.charging?' · in carica':'')]:['⚠️','Batteria',Math.round(batt.level*100)+'%: carica il telefono o porta un powerbank']):['ℹ️','Batteria','Controlla che sia carica (o porta un powerbank)'],
-    'wakeLock' in navigator?(lock?['✅','Schermo acceso','Resta acceso da solo: non bloccare il telefono']:['⚠️','Schermo acceso','Non bloccare il telefono: il gruppo non ti vedrebbe',['Tienilo acceso',()=>{wake().then(()=>setTimeout(renderReady,300))}]]):['ℹ️','Schermo acceso','Alza lo spegnimento automatico dello schermo nelle impostazioni del telefono e non bloccarlo durante il giro'],
+    S.keepAwake!==true?['⚠️','Schermo acceso',S.keepAwake===false?'Spento: se blocchi il telefono il gruppo non ti vede':'Non ancora scelto',['Attiva',()=>setAwake(true)]]:'wakeLock' in navigator?(lock?['✅','Schermo acceso','Resta acceso da solo: non bloccare il telefono']:['⚠️','Schermo acceso','Non bloccare il telefono: il gruppo non ti vedrebbe',['Tienilo acceso',()=>{wake().then(()=>setTimeout(renderReady,300))}]]):['ℹ️','Schermo acceso','Alza lo spegnimento automatico dello schermo nelle impostazioni del telefono e non bloccarlo durante il giro'],
     S.saver?['✅','Risparmio batteria','Attivo']:['ℹ️','Risparmio batteria','Spento: consigliato per i giri lunghi',['Attiva',()=>{S.saver=true;saveS();$('sSaver').classList.add('on');applySaver()}]],
   ];
   rows.forEach(([ic,tt,sub,fix])=>{const el=document.createElement('div');el.className='item';
@@ -1281,9 +1289,16 @@ document.addEventListener('visibilitychange',()=>{
   if(m>=1){lockAlertTxt=`📵 Telefono bloccato per ${m} min: ${sharing?'il gruppo non ti vedeva':''}${sharing&&rec?' e ':''}${rec?'il giro non si registrava':''}. Lascia lo schermo acceso`;
     delete dismissed['_lock'+lockAlertTxt.split('·')[0]];buzz([200,100,200]);setAlerts()}
 });
+/* ---------- schermo acceso: lo chiedo una volta, prima di tenerlo acceso ---------- */
+function askAwake(){if(S.keepAwake!=null)return false;setTimeout(()=>showSheet('awakeSheet'),600);return true}
+function setAwake(v){S.keepAwake=v;saveS();$('sAwake').classList.toggle('on',v);if(v){wake();toast('☀️ Lo schermo resta acceso durante il giro',2200)}else{try{lock&&lock.release()}catch(e){}lock=null;toast('Ok: ricordati di non bloccare il telefono',2600)}if($('readySheet').classList.contains('open'))renderReady()}
+$('awakeYes').onclick=()=>{closeSheet();setAwake(true)};
+$('awakeNo').onclick=()=>{closeSheet();setAwake(false)};
+$('sAwake').classList.toggle('on',S.keepAwake===true);$('sAwake').onclick=()=>setAwake(S.keepAwake!==true);
+if(S.keepAwake==null&&(sharing||rec))setTimeout(askAwake,3500);
 /* ---------- schermo acceso ---------- */
 let lock=null;
-async function wake(){try{if('wakeLock' in navigator&&!lock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
+async function wake(){if(S.keepAwake!==true)return;try{if('wakeLock' in navigator&&!lock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>lock=null)}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(rec)recalc();if(rec)store.set('edt_rec_live',rec)}else if(rec)store.set('edt_rec_live',rec)});
 window.addEventListener('pagehide',()=>{if(rec)store.set('edt_rec_live',rec)});
 
