@@ -314,12 +314,13 @@ let tT;function toast(t,ms=2200){const e=$('toast');e.textContent=t;e.classList.
 const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8ff','#2f5bff','#b06bff','#ffffff','#8a877e','#111111'];
 
 /* ---------- impostazioni ---------- */
-const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:20,offRoute:60,
+const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
   grades:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
 if(S.base==='dark')S.base='edtnight';
+if(!store.get('edt_set_v3',false)){S.resume=0;store.set('edt_set_v3',true);saveS()}
 if(!store.get('edt_set_v2',false)){if(S.base==='topo')S.base='edt';if(!S.hill)S.hill=30;store.set('edt_set_v2',true);saveS()}
 const ll=p=>[p[1],p[0]];                       // [lat,lon] -> [lon,lat]
 const v0=store.get('edt_view',[44.9,7.6,9]);
@@ -477,6 +478,7 @@ function setFollow(v,dragging){
   if(!v&&!dragging&&(map.getPitch()>0))map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
+map.on('moveend',e=>{if(!e.originalEvent||!follow||!me)return;const pp=map.project(ll(me)),c=map.getCanvas(),w=c.clientWidth,h=c.clientHeight;if(pp.x<w*.15||pp.x>w*.85||pp.y<h*.15||pp.y>h*.85)setFollow(false,true)});
 map.on('dragend',()=>{if(!follow&&map.getPitch()>0)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:400})});
 map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false,true);armResume()});
 // torna a seguirti solo dopo N secondi SENZA toccare la mappa (prima i timer si accumulavano e la mappa saltava indietro mentre la guardavi)
