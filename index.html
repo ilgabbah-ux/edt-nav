@@ -731,7 +731,7 @@ $('stopBtn').onclick=()=>{
   if(!stopArmed){stopArmed=true;$('stopBtn').textContent='OK?';setTimeout(()=>{stopArmed=false;$('stopBtn').textContent='STOP'},3000);return}
   stopArmed=false;$('stopBtn').textContent='STOP';
   const pts=rec.pts.filter(Boolean);
-  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500);postRide(t);setTimeout(()=>showRide(t),600)}
+  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500);postRide(t);if(t.dist>=500)setTimeout(()=>showRide(t),600)}
   else toast('Giro troppo corto, non salvato');
   rec=null;store.set('edt_rec_live',null);recalc();recUI();renderLists();
 };
