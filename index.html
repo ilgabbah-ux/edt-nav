@@ -465,13 +465,16 @@ $('stopBtn').onclick=()=>{
 let me=null,meMk=null,follow=true,watchId=null,lastFix=null,heading=null;
 const st={speed:null,alt:null};          // valori per i riquadri dati
 let resumeT=null,manualZoomAt=0;
-function setFollow(v){
+function setFollow(v,dragging){
+  if(follow===v&&!v)return;
   follow=v;$('followBtn').classList.toggle('on',v);clearTimeout(resumeT);
   if(v&&me){userZoomed=false;azBand=null;if(map.getZoom()<13)map.setZoom(15);camera(true)}
-  if(!v)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
+  // mai animare la mappa mentre la stai trascinando: l'animazione "frena" il dito
+  if(!v&&!dragging&&(map.getPitch()>0))map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
-map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
+map.on('dragend',()=>{if(!follow&&map.getPitch()>0)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:400})});
+map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false,true);if(S.resume>0&&me)resumeT=setTimeout(()=>{if(!follow)setFollow(true)},S.resume*1000)});
 map.on('zoomstart',e=>{if(e.originalEvent){manualZoomAt=Date.now();userZoomed=true}});
 // mappa che gira con la direzione di marcia
 function orient(){
