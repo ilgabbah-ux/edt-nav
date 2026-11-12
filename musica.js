@@ -15,7 +15,7 @@
     ['sergione-vs-renard', 'Sergione vs Renard'], ['christmas-madness', 'Christmas Madness'], ['ethereal-hammer', 'Ethereal Hammer'],
     ['fango-senza-pieta', 'Fango senza pietà'], 
     ['euro-zero-inferno', 'Euro Zero Inferno'], ['ti-fa-male-la-gamba', 'Ti fa male la gamba?'],
-    ['re-dell-ignoranza-4x4', "I Re dell'ignoranza 4x4"], ['halloween-trial-team-night', 'Halloween (Trial Team Night)'], ['disgelo-dance', 'Disgelo Dance'],
+    ['re-dell-ignoranza-4x4', "I Re dell'ignoranza 4x4"], ['halloween-trial-team-night', 'Halloween (Trial Team Night)'], 
     ['ansia-da-colonnina', 'Ansia da colonnina'], ['quanto-costa', 'Quanto costa?'],
     ['bollo-addio', 'Bollo addio! Pieno porco dio!'], ['lultimo-e-poi-andiamo', "L'ultimo e poi andiamo!"], 
     ['mirco-vs-miti', 'Mirco vs Miti'], ['purcello-vs-paletta', 'Purcello vs Paletta'], ['angelo', 'Angelo'],
