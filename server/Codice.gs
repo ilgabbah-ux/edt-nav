@@ -118,6 +118,7 @@ function doPost(e) {
     var b = JSON.parse((e.postData && e.postData.contents) || '{}');
     if (b.a === 'tset') out = trackSet(b);
     else if (b.a === 'ride') out = rideAdd(b);
+    else if (b.a === 'bug') out = bugAdd(b);
     else if (b.key !== EXPORT_KEY) out = { ok: false, error: 'codice' };
     else if (b.a === 'save') out = saveRide(b);
     else if (b.a === 'blist') out = listRides(b);
@@ -174,6 +175,18 @@ function leadGet(p) {
 
 /* ---------- classifica: giri di oggi e totali della stagione ----------
    Salvati in un file JSON su Drive (tracks/Giri EDT Nav/classifica-<gruppo>.json): Drive è già autorizzato. */
+/* ---------- segnalazioni dei problemi dall'app: un file di testo (più l'eventuale screenshot) in Drive ---------- */
+function bugAdd(b) {
+  var cache = CacheService.getScriptCache(), k = 'bugs_' + Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyyMMddHH'), n = +(cache.get(k) || 0);
+  if (n >= 40) return { ok: false, error: 'troppe' };
+  cache.put(k, String(n + 1), 3700);
+  var dir = sub(sub(DriveApp.getFolderById(TRACKS_ROOT), 'Giri EDT Nav'), 'Segnalazioni');
+  var stamp = Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyy-MM-dd HH.mm.ss'), who = clean(b.n, 20) || 'anonimo', name = stamp + ' - ' + who;
+  dir.createFile(name + '.txt', 'Da: ' + who + ' (gruppo ' + clean(b.g, 20) + ')\n' + stamp + '\n\n' + String(b.txt || '').slice(0, 4000) + '\n\n--- dati del telefono ---\n' + String(b.info || '').slice(0, 20000), 'text/plain');
+  var m = String(b.img || '').match(/^data:image\/(jpeg|png);base64,(.+)$/);
+  if (m && m[2].length < 2000000) dir.createFile(Utilities.newBlob(Utilities.base64Decode(m[2]), 'image/' + m[1], name + (m[1] === 'png' ? '.png' : '.jpg')));
+  return { ok: true };
+}
 function statsFile(g) {
   var dir = sub(DriveApp.getFolderById(TRACKS_ROOT), 'Giri EDT Nav'), name = 'classifica-' + g + '.json', it = dir.getFilesByName(name);
   return it.hasNext() ? it.next() : dir.createFile(name, '{}', 'application/json');
