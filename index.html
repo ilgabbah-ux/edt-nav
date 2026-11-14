@@ -1047,8 +1047,14 @@ function renderLists(){
 }
 function shTab(t){t=t||store.get('edt_shtab','giro');store.set('edt_shtab',t);$('shTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.shtab').forEach(d=>d.hidden=d.dataset.t!==t);if(t==='foto'&&typeof renderPhotos==='function')renderPhotos()}
 function openSheet(tab){shTab(typeof tab==='string'?tab:null);renderLists();if(typeof zoneLabel==='function'&&!zoneBusy)zoneLabel();if(typeof renderCrew==='function')renderCrew();showSheet('sheet')}
-function showSheet(id){document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.toggle('open',s.id===id));$('scrim').classList.add('open')}
+function showSheet(id){try{if(!(history.state&&history.state.edt==='top'))history.pushState({edt:'top'},'')}catch(e){}document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.toggle('open',s.id===id));$('scrim').classList.add('open')}
 function closeSheet(){document.querySelectorAll('#sheet,.sheet').forEach(s=>s.classList.remove('open'));$('scrim').classList.remove('open')}
+// tasto/gesto "indietro" di Android: chiude il pannello aperto invece di uscire dall'app.
+// La voce nella cronologia la aggiungo quando apri un pannello (col tocco: Chrome la rispetta).
+window.addEventListener('popstate',()=>{
+  if(document.querySelector('#sheet.open,.sheet.open')){closeSheet();return}
+  history.back();
+});
 $('tracksBtn').onclick=openSheet;$('closeSheet').onclick=closeSheet;$('scrim').onclick=closeSheet;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheet);
 
