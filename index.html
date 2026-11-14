@@ -493,6 +493,15 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <h3>Linea del giro registrato</h3>
   <div class="swatches" id="recSw"></div>
   <div class="row"><div class="t">Spessore</div><input type="range" id="recW" min="2" max="14" step="1"></div>
+  <h3>Qualcosa non va?</h3>
+  <button class="wide-btn" id="bugOpen" style="border-color:var(--yellow);color:var(--yellow)">🐞 Segnala un problema al Gabbah</button>
+</section>
+<section class="sheet" id="bugSheet" aria-label="Segnala un problema">
+  <div class="sheet-h"><h2>Segnala un <em>problema</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
+  <p class="hint" style="margin-top:0">Scrivi cosa non va o cosa ti aspettavi. Il Gabbah lo riceve con i dati del telefono, così lo sistema prima.</p>
+  <textarea id="bugTxt" rows="5" maxlength="2000" placeholder="Es. ho premuto Segui ma la traccia non è comparsa" style="width:100%;box-sizing:border-box;background:#0f0f0e;color:#fff;border:2px solid #3a3833;border-radius:14px;padding:12px;font:inherit;font-size:17px;resize:vertical"></textarea>
+  <label class="wide-btn" style="margin-top:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-sizing:border-box;border:2px solid #3a3833;border-radius:14px;padding:14px;font-weight:700">📷 <span id="bugImgLbl">Aggiungi uno screenshot (facoltativo)</span><input type="file" id="bugImg" accept="image/*" hidden></label>
+  <button class="wide-btn" id="bugSend" style="margin-top:10px;background:var(--yellow);color:#111;border-color:var(--yellow)">Manda</button>
 </section>
 
 <section class="sheet onb" id="onbSheet" aria-label="Benvenuto">
@@ -602,7 +611,11 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <script src="percorso.js?v=25"></script>
 <script src="musica.js?v=8"></script>
 <script>
+// errori dell'app, per allegarli alle segnalazioni
+window._errs=[];addEventListener('error',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' '+e.message+' @'+(e.lineno||''));_errs=_errs.slice(-30)});
+addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
+const APPV='edt-nav-app-v68';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -791,6 +804,8 @@ function styleRec(){if(!mapReady)return;map.setPaintProperty('rec-line','line-co
 function setRecLine(ps){if(!mapReady)return;map.getSource('rec')?.setData(ps.length>1?{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:ps.map(ll)}}:EMPTY)}
 let recDist=0,recDrawAt=0;
 function recalc(){const ps=rec?rec.pts.filter(Boolean):[];recDist=trackLen(ps);setRecLine(ps)}
+// tempo in moto: conto solo i tratti in cui ti muovi (sopra ~3 km/h); le soste (bar compreso) restano fuori
+function movTime(pts){let t=0,a=null;for(const b of pts){if(!b||b[3]==null){a=null;continue}if(a){const dt=(b[3]-a[3])/1000;if(dt>0&&dt<=90&&hav(a,b)/dt>=.8)t+=dt}a=b}return Math.round(t)}
 function elapsed(){if(!rec)return 0;return rec.elapsed+(rec.paused?0:(Date.now()-rec.resumedAt)/1000)}
 function recUI(){
   const b=$('recBtn');b.classList.toggle('rec',!!rec&&!rec.paused);b.classList.toggle('paused',!!rec&&rec.paused);
@@ -809,7 +824,7 @@ $('stopBtn').onclick=()=>{
   if(!stopArmed){stopArmed=true;$('stopBtn').textContent='OK?';setTimeout(()=>{stopArmed=false;$('stopBtn').textContent='STOP'},3000);return}
   stopArmed=false;$('stopBtn').textContent='STOP';
   const pts=rec.pts.filter(Boolean);
-  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500);postRide(t);if(t.dist>=500)setTimeout(()=>showRide(t),600)}
+  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,mt:movTime(pts),time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500);postRide(t);if(t.dist>=500)setTimeout(()=>showRide(t),600)}
   else toast('Giro troppo corto, non salvato');
   rec=null;store.set('edt_rec_live',null);recalc();recUI();renderLists();
 };
@@ -1034,7 +1049,7 @@ function renderLists(){
   rl.innerHTML=recs.length?'':'<div class="empty">Ancora nessun giro. Premi Registra quando parti.</div>';
   recs.forEach(t=>{
     const d=document.createElement('div');d.className='item';
-    d.innerHTML=`<div class="sw" style="background:${t.color||'var(--yellow)'}"></div><div style="min-width:0"><div class="name">${esc(t.name)}</div><div class="meta">${km(t.dist)} · ${fmtT(t.time)} · +${t.gain} m</div></div>
+    d.innerHTML=`<div class="sw" style="background:${t.color||'var(--yellow)'}"></div><div style="min-width:0"><div class="name">${esc(t.name)}</div><div class="meta">${km(t.dist)} · ${fmtT(t.mt||t.time)} in moto · +${t.gain} m</div></div>
       <div class="acts"><button class="mini" data-a="see">Vedi</button><button class="mini" data-a="card" aria-label="Riepilogo da condividere">📊</button><button class="mini" data-a="gpx">GPX</button><button class="mini" data-a="edit" aria-label="Modifica">✎</button><button class="mini del" data-a="del">✕</button></div>`;
     d.onclick=e=>{const a=e.target.closest('button')?.dataset.a;
       if(a==='gpx')download(t);
@@ -1288,7 +1303,9 @@ function checkAlerts(){
       out.push({id,txt:`${lbl||d.n+' è indietro'} da 5 min · ${km(g.m)}${g.track?'':' in linea d\'aria'}`});
     }else if(g.m<lim*.6){delete behindSent[id];delete behindSince[id]}
   }
-  if(rally){const dm=me?km(hav(me,[rally.lat,rally.lon])):'';out.unshift({id:'_rv',rally:1,txt:`🏁 Ritrovo${rally.by?' di '+rally.by:''}${dm?' · '+dm:''}`})}
+  if(rally){const dm=me?km(hav(me,[rally.lat,rally.lon])):'',rm=me?rallyMin(me,lastKmh):null;
+    const late=Object.values(riders).map(({d})=>({n:d.n,m:rallyMin([d.lat,d.lon],d.s||0)})).filter(x=>x.m!=null).sort((a,b)=>+b.m.replace('<','')-+a.m.replace('<',''))[0];
+    out.unshift({id:'_rv',rally:1,txt:`🏁 Ritrovo${rally.by?' di '+rally.by:''}${dm?' · '+dm:''}${rm!=null?' · tu ~'+rm+' min':''}${late&&late.m!=='<1'?' · ultimo '+late.n+' ~'+late.m+' min':''}`})}
   alertList=out;setAlerts();
 }
 const dismissed={};
@@ -1310,6 +1327,8 @@ function setAlerts(){
     box.appendChild(el);
   });
 }
+// minuti per arrivare al ritrovo: strada ~35% più lunga della linea d'aria, alla tua velocità (minimo 25 km/h, da fermo 25)
+function rallyMin(pt,kmh){if(!rally||!pt)return null;const v=Math.min(70,kmh>15?Math.max(25,kmh):25),m=hav(pt,[rally.lat,rally.lon])*1.35/1000/v*60;return m<1?'<1':String(Math.round(m))}
 function renderCrew(){
   const n=Object.keys(riders).length;$('crewCount').textContent=n;
   const cl=$('crewList');
@@ -1317,8 +1336,8 @@ function renderCrew(){
   cl.innerHTML=n?'':`<div class="empty">Nessun altro nel gruppo "${esc(crew.group)}" per ora. Gli amici devono usare lo stesso codice.</div>`;
   Object.values(riders).sort((a,b)=>a.d.n.localeCompare(b.d.n)).forEach(({d})=>{
     const el=document.createElement('div');el.className='item';
-    const dist=me?km(hav(me,[d.lat,d.lon])):'–';
-    el.innerHTML=`<div class="sw" style="background:${d.sos?'var(--red)':d.ago>180?'#8a877e':'#2fb8ff'}"></div><div style="min-width:0"><div class="name">${esc((d.no?d.no+' · ':'')+d.n)}</div><div class="meta">${dist} · ${ago(d.ago)}${d.sos?' · FERMO':''}</div></div><div class="acts"><button class="mini" data-a="reach">Raggiungi</button><button class="mini" data-a="go">Vedi</button></div>`;
+    const dist=me?km(hav(me,[d.lat,d.lon])):'–',rm=rallyMin([d.lat,d.lon],d.s||0);
+    el.innerHTML=`<div class="sw" style="background:${d.sos?'var(--red)':d.ago>180?'#8a877e':'#2fb8ff'}"></div><div style="min-width:0"><div class="name">${esc((d.no?d.no+' · ':'')+d.n)}</div><div class="meta">${dist} · ${ago(d.ago)}${d.sos?' · FERMO':''}${rm!=null?' · 🏁 ~'+rm+' min':''}</div></div><div class="acts"><button class="mini" data-a="reach">Raggiungi</button><button class="mini" data-a="go">Vedi</button></div>`;
     el.onclick=e=>{if(e.target.closest('[data-a=reach]')){closeSheet();reach(d.id);return}setFollow(false);map.easeTo({center:[d.lon,d.lat],zoom:16});closeSheet()};
     cl.appendChild(el);
   });
@@ -1569,8 +1588,8 @@ async function rideCard(r){
     const path=()=>{g.beginPath();pts.forEach((p,i)=>{const q=P(p);i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])})};
     g.lineJoin=g.lineCap='round';path();g.strokeStyle='#000';g.lineWidth=20;g.stroke();path();g.strokeStyle='#ffd21f';g.lineWidth=10;g.stroke();
     const a=P(pts[0]),b=P(pts[pts.length-1]);[[a,'#2f9e44'],[b,'#e3261b']].forEach(([q,col])=>{g.beginPath();g.arc(q[0],q[1],18,0,7);g.fillStyle=col;g.fill();g.lineWidth=6;g.strokeStyle='#fff';g.stroke()})}
-  const avg=r.time>60?Math.round(r.dist/r.time*3.6):0,mx=maxSpeed(pts);
-  const box=[['KM',(r.dist/1000).toFixed(1)],['TEMPO',fmtT(r.time)],['SALITA','+'+r.gain+' m'],['MEDIA',avg+' km/h'],['MAX',mx?mx+' km/h':'–'],['PARTENZA',t0?hm(new Date(t0)):'–']];
+  const mt=r.mt!=null?r.mt:movTime(pts),tt=mt>60?mt:r.time,avg=tt>60?Math.round(r.dist/tt*3.6):0,mx=maxSpeed(pts);
+  const box=[['KM',(r.dist/1000).toFixed(1)],['IN MOTO',fmtT(tt)],['SOSTE',r.time-tt>60?fmtT(r.time-tt):'–'],['MEDIA',avg+' km/h'],['MAX',mx?mx+' km/h':'–'],['SALITA','+'+r.gain+' m']];
   box.forEach(([l,v],i)=>{const bx=60+(i%3)*330,by=950+Math.floor(i/3)*170;g.fillStyle='#1b1b19';g.beginPath();g.roundRect(bx,by,300,150,22);g.fill();g.strokeStyle='#3a3833';g.lineWidth=3;g.stroke();
     g.fillStyle='#bdb9ae';g.font=F(600,32);g.fillText(l,bx+24,by+48);g.fillStyle='#fff';g.font=F(800,64);g.fillText(v,bx+24,by+122)});
   g.fillStyle='#ffd21f';g.font=F(800,40);g.textAlign='center';g.fillText('Tranquilli, è un giro easy',W/2,H-36);g.textAlign='left';
@@ -1582,7 +1601,21 @@ $('rideShare').onclick=async()=>{if(!rideBlob)return;const f=new File([rideBlob]
 $('rideSave').onclick=()=>{if(!rideBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(rideBlob);a.download=rideName+'.jpg';document.body.appendChild(a);a.click();a.remove()};
 /* ---------- classifica del gruppo ---------- */
 async function postRide(r){if(!sharing||!crew.name||r.dist<1000)return;const pts=r.pts.filter(Boolean);
-  try{await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'ride',g:crew.group,n:crew.name,km:r.dist/1000,time:r.time,gain:r.gain,max:maxSpeed(pts),avg:r.time>60?r.dist/r.time*3.6:0})});r.posted=1;store.set('edt_recs',recs)}catch(e){}}
+  try{await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'ride',g:crew.group,n:crew.name,km:r.dist/1000,time:(r.mt!=null?r.mt:movTime(pts))||r.time,gain:r.gain,max:maxSpeed(pts),avg:((r.mt!=null?r.mt:movTime(pts))||r.time)>60?r.dist/((r.mt!=null?r.mt:movTime(pts))||r.time)*3.6:0})});r.posted=1;store.set('edt_recs',recs)}catch(e){}}
+/* ---------- segnala un problema (arriva al Gabbah nel Drive, cartella Segnalazioni) ---------- */
+let bugImgData=null;
+$('bugOpen').onclick=()=>{$('bugTxt').value='';bugImgData=null;$('bugImgLbl').textContent='Aggiungi uno screenshot (facoltativo)';showSheet('bugSheet');setTimeout(()=>$('bugTxt').focus(),350)};
+$('bugImg').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const im=await createImageBitmap(f),k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);bugImgData=c.toDataURL('image/jpeg',.72);$('bugImgLbl').textContent='Screenshot aggiunto ✓'}catch(x){toast('Immagine non leggibile',2000)}};
+$('bugSend').onclick=async()=>{const txt=$('bugTxt').value.trim();if(txt.length<3&&!bugImgData){toast('Scrivi due parole su cosa non va',2000);return}
+  let bat='';try{const b=await navigator.getBattery();bat=Math.round(b.level*100)+'%'+(b.charging?' in carica':'')}catch(x){}
+  const info={app:APPV,quando:new Date().toString(),browser:navigator.userAgent,schermo:screen.width+'x'+screen.height+' @'+devicePixelRatio,installata:matchMedia('(display-mode: standalone)').matches,
+    online:navigator.onLine,batteria:bat,gps:me?{acc:lastAcc,eta_fix_s:Math.round((Date.now()-gpsAt)/1000)}:'nessun fix',condivisione:sharing,gruppo:crew.group,ruolo:crew.role||'',
+    traccia:(gpx.find(t=>t.id===active)||{}).name||'',registrazione:!!rec,impostazioni:S,errori:(window._errs||[]).slice(-15)};
+  $('bugSend').disabled=true;$('bugSend').textContent='Mando…';
+  try{const r=await (await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'bug',g:crew.group,n:crew.name||'anonimo',txt,info:JSON.stringify(info,null,1),img:bugImgData})})).json();
+    if(!r.ok)throw new Error(r.error);closeSheet();toast('🐞 Grazie! Il Gabbah l\'ha ricevuto',2500)}
+  catch(x){toast(navigator.onLine?'Non sono riuscito a mandarlo, riprova tra poco':'Senza rete: riprova quando torna il campo',3000)}
+  finally{$('bugSend').disabled=false;$('bugSend').textContent='Manda'}};
 $('rankOpen').onclick=async()=>{showSheet('rankSheet');const B=$('rankBody');B.innerHTML='<div class="empty">Carico la classifica…</div>';
   try{const j=await (await fetch(SERVER+'?'+new URLSearchParams({a:'stats',g:crew.group}),{cache:'no-store'})).json();if(!j.ok)throw 0;
     const day=j.day||[],by={};day.forEach(r=>{const x=by[r.n]||(by[r.n]={n:r.n,km:0,time:0,gain:0,max:0,avg:0});x.km+=r.km;x.time+=r.time;x.gain+=r.gain;x.max=Math.max(x.max,r.max);x.avg=x.time?x.km/x.time*3600:0});
