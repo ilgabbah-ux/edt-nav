@@ -615,7 +615,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 window._errs=[];addEventListener('error',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' '+e.message+' @'+(e.lineno||''));_errs=_errs.slice(-30)});
 addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
-const APPV='edt-nav-app-v68';
+const APPV='edt-nav-app-v69';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -744,7 +744,10 @@ function parseGPX(txt,fallback){
   grab('trkpt'); if(!pts.length) grab('rtept');
   const wpts=[...x.querySelectorAll('wpt')].map(w=>({lat:+w.getAttribute('lat'),lon:+w.getAttribute('lon'),name:(w.querySelector('name')||{}).textContent||''}));
   if(!pts.length&&!wpts.length) throw new Error('Nessun punto trovato nel file');
-  return {name:name.trim(),pts,wpts};
+  // più percorsi nello stesso file (es. facile / medio / hard): li tengo separati, uno per traccia
+  const parts=[...x.querySelectorAll('trk')].concat(pts.length&&!x.querySelector('trkpt')?[...x.querySelectorAll('rte')]:[]).map((el,i)=>{const q=[];el.querySelectorAll('trkpt,rtept').forEach(p=>{const la=+p.getAttribute('lat'),lo=+p.getAttribute('lon');if(isFinite(la)&&isFinite(lo)){const e=p.querySelector('ele'),tm=p.querySelector('time'),ts=tm?Date.parse(tm.textContent):NaN;q.push(isFinite(ts)?[la,lo,e?+e.textContent:null,ts]:[la,lo,e?+e.textContent:null])}});
+    return {name:((el.querySelector(':scope > name')||{}).textContent||'').trim(),pts:q}}).filter(t=>t.pts.length>1);
+  return {name:name.trim(),pts,wpts,parts};
 }
 function toGPX(t){
   const pts=t.pts.map(p=>`<trkpt lat="${p[0].toFixed(7)}" lon="${p[1].toFixed(7)}">${p[2]!=null?`<ele>${p[2].toFixed(1)}</ele>`:''}${p[3]?`<time>${new Date(p[3]).toISOString()}</time>`:''}</trkpt>`).join('\n');
@@ -784,14 +787,18 @@ function refreshGpx(){
 let gpxQ=false;function drawGpx(){if(gpxQ)return;gpxQ=true;requestAnimationFrame(()=>{gpxQ=false;refreshGpx()})}
 function saveGpx(){gpx.forEach(t=>{if(t._turnsFor!==t.pts){delete t._turns;t._turnsFor=t.pts}});store.set('edt_gpx',gpx.map(({_c,_turns,_turnsFor,_ni,...t})=>t));store.set('edt_active',active)}
 async function loadFiles(files){
-  let last=null;
+  let last=null,multi=0;const skip=[];
   for(const f of files){
-    try{const p=parseGPX(await f.text(),f.name.replace(/\.gpx$/i,''));
-      const t={id:'g'+Date.now()+Math.random().toString(36).slice(2,6),name:p.name,pts:p.pts,wpts:p.wpts,color:['#ff3b8d','#2fb8ff','#b06bff','#ff8a1f','#3ccf6e','#ffffff'][gpx.length%6],width:5,op:100,vis:true};
-      gpx.push(t);last=t;
+    try{const txt=await f.text();
+      if(/^%PDF/.test(txt)||/\.(pdf|jpe?g|png|docx?|kmz|zip)$/i.test(f.name)){skip.push(f.name);toast(f.name+': non è una traccia GPX. Scegli il file che finisce con .gpx',4000);continue}
+      const p=parseGPX(txt,f.name.replace(/\.gpx$/i,''));
+      const COL=['#ff3b8d','#2fb8ff','#b06bff','#ff8a1f','#3ccf6e','#ffffff'];
+      const list=p.parts.length>1?p.parts.map((q,i)=>({name:q.name||p.name+' '+(i+1),pts:q.pts,wpts:i?[]:p.wpts})):[{name:p.name,pts:p.pts,wpts:p.wpts}];
+      list.forEach(q=>{const t={id:'g'+Date.now()+Math.random().toString(36).slice(2,6),name:q.name,pts:q.pts,wpts:q.wpts,color:COL[gpx.length%6],width:5,op:100,vis:true};gpx.push(t);if(!last)last=t});
+      if(list.length>1){multi=list.length;}
     }catch(e){toast(f.name+': '+e.message,3000)}
   }
-  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts);if(!(navigator.connection&&navigator.connection.saveData))setTimeout(()=>downloadZone(last,true),2500);setTimeout(()=>fuelLoad(last,false),1200)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast('Traccia caricata: '+last.name);updateNav()}
+  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts);if(!(navigator.connection&&navigator.connection.saveData))setTimeout(()=>downloadZone(last,true),2500);setTimeout(()=>fuelLoad(last,false),1200)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast((multi?'Nel file ci sono '+multi+' percorsi: li trovi tutti in Tracce, attiva quello che fai':'Traccia caricata: '+last.name)+(skip.length?' (saltato '+skip.join(', ')+': non è un GPX)':''),multi||skip.length?5000:2500);updateNav()}
 }
 $('loadBtn').onclick=()=>$('fileIn').click();
 $('fileIn').onchange=e=>{loadFiles([...e.target.files]);e.target.value=''};
