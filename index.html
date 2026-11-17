@@ -303,6 +303,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
     <button id="navOff" aria-label="Spegni la navigazione">✕</button>
   </div>
   <div id="elev" aria-label="Profilo altimetrico, tocca per nascondere"><svg viewBox="0 0 400 58" preserveAspectRatio="none"><path id="elevFill" fill="rgba(255,210,31,.25)"/><path id="elevLine" fill="none" stroke="#ffd21f" stroke-width="1.6" vector-effect="non-scaling-stroke"/><path id="elevDone" fill="rgba(255,255,255,.12)"/><line id="elevMe" y1="0" y2="58" stroke="#e3261b" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg><div id="elevTxt"></div></div>
+  <div id="askBox" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;pointer-events:auto"></div>
   <div id="alerts"></div>
   <div id="netPill" hidden>📡 Senza campo · il gruppo si aggiorna appena torna il segnale</div>
 </div>
@@ -540,6 +541,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div class="sheet-h"><h2>Il tuo <em>giro</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
   <img id="rideImg" alt="Riepilogo del giro" style="width:100%;border-radius:12px;border:2px solid var(--line)">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button class="wide-btn go" id="rideShare" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Condividi</button><button class="wide-btn" id="rideSave" style="margin:0"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h8M8 21v-7h8v7"/></svg> Salva immagine</button></div>
+  <button class="wide-btn" id="rideBug" style="margin-top:10px">🐞 Qualcosa non ha funzionato nel giro? Dimmelo</button>
 </section>
 <section class="sheet" id="rankSheet" aria-label="Classifica">
   <div class="sheet-h"><h2>Classifica <em>EDT</em></h2><button class="close" data-close aria-label="Chiudi">✕</button></div>
@@ -612,10 +614,11 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 <script src="musica.js?v=8"></script>
 <script>
 // errori dell'app, per allegarli alle segnalazioni
-window._errs=[];addEventListener('error',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' '+e.message+' @'+(e.lineno||''));_errs=_errs.slice(-30)});
+window._errs=[];window._errN=0;addEventListener('error',e=>{window._errN++;_errs.push(new Date().toTimeString().slice(0,8)+' '+e.message+' @'+(e.lineno||''));_errs=_errs.slice(-30)});
 addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
-const APPV='edt-nav-app-v69';
+function use(k){try{const u=JSON.parse(localStorage.getItem('edt_use')||'{}');u[k]=(u[k]||0)+1;localStorage.setItem('edt_use',JSON.stringify(u))}catch(e){}}
+const APPV='edt-nav-app-v70';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -798,7 +801,8 @@ async function loadFiles(files){
       if(list.length>1){multi=list.length;}
     }catch(e){toast(f.name+': '+e.message,3000)}
   }
-  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts);if(!(navigator.connection&&navigator.connection.saveData))setTimeout(()=>downloadZone(last,true),2500);setTimeout(()=>fuelLoad(last,false),1200)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();toast((multi?'Nel file ci sono '+multi+' percorsi: li trovi tutti in Tracce, attiva quello che fai':'Traccia caricata: '+last.name)+(skip.length?' (saltato '+skip.join(', ')+': non è un GPX)':''),multi||skip.length?5000:2500);updateNav()}
+  if(last){if(last.pts.length){active=last.id;if(S.grades)EDTGRADE.along(last.pts);if(!(navigator.connection&&navigator.connection.saveData))setTimeout(()=>downloadZone(last,true),2500);setTimeout(()=>fuelLoad(last,false),1200)}saveGpx();gpx.forEach(drawGpx);renderLists();fitTo(last);closeSheet();if(last.pts.length&&sharing&&crew.name){const tl=last;setTimeout(()=>ask('share','📤 Mandi «'+tl.name+'» a tutto il gruppo? Gli arriva da sola','Manda',()=>shareTrack(tl),'No',null),1500)}
+  toast((multi?'Nel file ci sono '+multi+' percorsi: li trovi tutti in Tracce, attiva quello che fai':'Traccia caricata: '+last.name)+(skip.length?' (saltato '+skip.join(', ')+': non è un GPX)':''),multi||skip.length?5000:2500);updateNav()}
 }
 $('loadBtn').onclick=()=>$('fileIn').click();
 $('fileIn').onchange=e=>{loadFiles([...e.target.files]);e.target.value=''};
@@ -821,7 +825,7 @@ function recUI(){
   b.querySelector('svg').innerHTML=!rec?'<circle cx="12" cy="12" r="7" fill="currentColor"/>':rec.paused?'<path d="M8 5l11 7-11 7z" fill="currentColor"/>':'<rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/>';
 }
 $('recBtn').onclick=()=>{
-  if(!rec){const d=new Date();rec={name:'Giro EDT '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),start:Date.now(),pts:[],paused:false,elapsed:0,resumedAt:Date.now()};toast('Registrazione avviata');setFollow(true);startGPS()}
+  if(!rec){use('rs');const d=new Date();rec={name:'Giro EDT '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),start:Date.now(),pts:[],paused:false,elapsed:0,resumedAt:Date.now()};toast('Registrazione avviata');setFollow(true);startGPS()}
   else if(rec.paused){rec.paused=false;rec.resumedAt=Date.now();rec.pts.push(null);toast('Si riparte',1200)}
   else{rec.elapsed=elapsed();rec.paused=true;toast('In pausa',1200)}
   store.set('edt_rec_live',rec);recUI();motionStart();if(!askAwake()){wake();lockTip()}
@@ -829,12 +833,43 @@ $('recBtn').onclick=()=>{
 let stopArmed=false;
 $('stopBtn').onclick=()=>{
   if(!stopArmed){stopArmed=true;$('stopBtn').textContent='OK?';setTimeout(()=>{stopArmed=false;$('stopBtn').textContent='STOP'},3000);return}
-  stopArmed=false;$('stopBtn').textContent='STOP';
-  const pts=rec.pts.filter(Boolean);
-  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,mt:movTime(pts),time:Math.round(elapsed()),dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);toast('Giro salvato: '+km(t.dist));setTimeout(()=>backupNow(true),1500);postRide(t);if(t.dist>=500)setTimeout(()=>showRide(t),600)}
-  else toast('Giro troppo corto, non salvato');
-  rec=null;store.set('edt_rec_live',null);recalc();recUI();renderLists();
+  stopArmed=false;$('stopBtn').textContent='STOP';finishRec(false);
 };
+// chiude il giro: lo salva, lo manda in classifica e (se non è automatico) mostra il riepilogo
+function finishRec(auto){if(!rec)return;
+  const pts=rec.pts.filter(Boolean),end=pts.length?pts[pts.length-1][3]||Date.now():Date.now();
+  const time=auto?Math.round(rec.elapsed+(rec.paused?0:Math.max(0,(end-rec.resumedAt)/1000))):Math.round(elapsed());
+  if(pts.length>1){const t={id:'r'+rec.start,name:rec.name,pts,mt:movTime(pts),time,dist:Math.round(trackLen(pts)),gain:Math.round(gain(pts))};recs.unshift(t);store.set('edt_recs',recs);use('rv');
+    toast(auto?'Ho chiuso il giro rimasto aperto: '+km(t.dist)+(t.dist>=1000&&crew.name?' · è in classifica':''):'Giro salvato: '+km(t.dist),auto?4500:2500);setTimeout(()=>backupNow(true),1500);postRide(t);if(!auto&&t.dist>=500)setTimeout(()=>showRide(t),600)}
+  else if(!auto)toast('Giro troppo corto, non salvato');
+  rec=null;store.set('edt_rec_live',null);recalc();recUI();renderLists()}
+/* domande veloci sopra gli avvisi (sì / no), una per tipo */
+function ask(id,txt,yes,onYes,no,onNo){const box=$('askBox');if(box.querySelector('[data-k="'+id+'"]'))return;
+  const el=document.createElement('div');el.className='alert';el.dataset.k=id;
+  el.innerHTML=`<div>${esc(txt)}</div><div style="display:flex;gap:6px"><button data-a="y" style="background:var(--yellow);color:#111;border-color:var(--yellow)">${esc(yes)}</button><button data-a="n">${esc(no)}</button></div>`;
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;el.remove();(b.dataset.a==='y'?onYes:onNo||(()=>{}))()};box.appendChild(el);try{navigator.vibrate&&navigator.vibrate(120)}catch(x){}}
+function unask(id){const e=$('askBox').querySelector('[data-k="'+id+'"]');if(e)e.remove()}
+// sei in moto ma non stai registrando? te lo chiedo (al massimo una volta ogni 2 ore)
+let sosAt=+(localStorage.getItem('edt_sos')==='true'?Date.now():0);
+setInterval(()=>{if(sos&&sosAt&&Date.now()-sosAt>10*60e3&&(lastKmh||0)<5){sosAt=Date.now();ask('sos','🆘 Hai ancora l\'imprevisto attivo: tutto ok?','Tutto ok',()=>setSos(false),'Serve ancora',null)}},30000);
+let fastSince=0,recAskAt=+(localStorage.getItem('edt_recask')||0);
+function recAutoCheck(kmh){
+  if(rec||kmh<15){if(kmh<8)fastSince=0;return}
+  if(!fastSince)fastSince=Date.now();
+  if(Date.now()-fastSince>60000&&Date.now()-recAskAt>2*3600e3){recAskAt=Date.now();try{localStorage.setItem('edt_recask',recAskAt)}catch(e){}
+    ask('rec','🏍️ Sei in moto: registro il giro? (serve per riepilogo e classifica)','Registra',()=>{if(!rec)$('recBtn').click()},'No',null)}}
+// giro aperto da ore senza movimento: alla riapertura lo chiudo, durante il giro lo chiedo
+function recStaleCheck(){if(!rec)return;const pts=rec.pts.filter(Boolean),last=pts.length?pts[pts.length-1][3]||rec.start:rec.start,idle=Date.now()-last;
+  if(idle>4*3600e3){finishRec(true);return}
+  if(idle>90*60e3&&!rec.paused)ask('recend','Sei fermo da più di un\'ora e mezza: chiudo il giro?','Chiudi',()=>finishRec(false),'Continua',()=>{rec.pts.push(null)})}
+setTimeout(recStaleCheck,4000);
+// conteggi anonimi d'uso (aperture, giri iniziati/salvati, errori): partono una volta ogni 6 ore, senza nome né posizione
+use('op');
+setTimeout(async()=>{try{let uid=localStorage.getItem('edt_uid');if(!uid){uid=Math.random().toString(36).slice(2,12);localStorage.setItem('edt_uid',uid)}
+  if(Date.now()-(+localStorage.getItem('edt_usesent')||0)<6*3600e3||!navigator.onLine)return;
+  const d=JSON.parse(localStorage.getItem('edt_use')||'{}');d.err=(d.err||0)+(window._errN||0);
+  const r=await (await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'use',u:uid,v:APPV,g:crew.group||'',d,sh:sharing?1:0})})).json();
+  if(r.ok){localStorage.setItem('edt_use','{}');localStorage.setItem('edt_usesent',Date.now())}}catch(e){}},12000);setInterval(recStaleCheck,5*60e3);
 
 /* ---------- GPS ---------- */
 let me=null,meMk=null,follow=true,watchId=null,lastFix=null,heading=null;
@@ -938,7 +973,7 @@ function onPos(p){
   gdot(c.accuracy<=15?'ok':'weak');
   if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1.5)heading=c.heading;
   else if(me&&hav(me,pt)>15&&c.accuracy<=20)heading=bearing(me,pt);
-  me=pt;lastAcc=c.accuracy;
+  me=pt;lastAcc=c.accuracy;recAutoCheck(c.speed!=null&&c.speed>=0?c.speed*3.6:lastKmh||0);
   if(S.tank&&c.accuracy<=35){if(fuelPt){const d=hav(fuelPt,pt);if(d>5){if(d<800){fuel.km+=d/1000;if(Math.floor(fuel.km*2)!==Math.floor((fuel.km-d/1000)*2))store.set('edt_fuel',fuel);fuelCheck()}fuelPt=pt}}else fuelPt=pt}
   if(!meMk){const el=document.createElement('div');el.innerHTML='<div class="me"><div class="pulse"></div><div class="cone"><svg viewBox="0 0 46 46"><path d="M23 3 L40 40 L23 31 L6 40 Z" fill="#ffd21f" stroke="#111" stroke-width="3.5" stroke-linejoin="round"/><path d="M23 11 L23 29" stroke="#e3261b" stroke-width="3.5" stroke-linecap="round"/></svg></div><div class="ring"></div><div class="melbl"></div></div>';
     meMk=new maplibregl.Marker({element:el}).setLngLat(ll(pt)).addTo(map);el.style.zIndex=5;map.on('rotate',coneUpdate)}
@@ -1208,7 +1243,7 @@ async function downloadZone(t,auto){
 $('sosShare').onclick=()=>sharePos(SOSTXT[sosR]||'🆘 Imprevisto');
 $('sosOpts').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(!ensureShare())return;sosR=b.dataset.r;store.set('edt_sos_r',sosR);setSos(true);closeSheet();if(sosR==='AIUTO')setTimeout(openHelp,400)};
 $('sosOk').onclick=()=>{setSos(false);closeSheet()};
-function setSos(v){sos=v;store.set('edt_sos',v);shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}
+function setSos(v){sos=v;store.set('edt_sos',v);sosAt=v?Date.now():0;if(!v)unask('sos');shareUI();ping(true);toast(v?'Avviso mandato al gruppo: '+sosR.toLowerCase():'Avviso tolto: tutto ok',2200)}
 
 // senza campo: tengo da parte dove passo, e quando torna il segnale lo mando al gruppo
 let trail=store.get('edt_trail',[]);
@@ -1607,10 +1642,12 @@ $('rideShare').onclick=async()=>{if(!rideBlob)return;const f=new File([rideBlob]
   try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Giro EDT',text:'Tranquilli, è un giro easy 😏'});return}}catch(e){if(e.name==='AbortError')return}$('rideSave').click()};
 $('rideSave').onclick=()=>{if(!rideBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(rideBlob);a.download=rideName+'.jpg';document.body.appendChild(a);a.click();a.remove()};
 /* ---------- classifica del gruppo ---------- */
-async function postRide(r){if(!sharing||!crew.name||r.dist<1000)return;const pts=r.pts.filter(Boolean);
+async function postRide(r){if(!crew.name||r.dist<1000||r.posted)return;const pts=r.pts.filter(Boolean);
   try{await fetch(SERVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:'ride',g:crew.group,n:crew.name,km:r.dist/1000,time:(r.mt!=null?r.mt:movTime(pts))||r.time,gain:r.gain,max:maxSpeed(pts),avg:((r.mt!=null?r.mt:movTime(pts))||r.time)>60?r.dist/((r.mt!=null?r.mt:movTime(pts))||r.time)*3.6:0})});r.posted=1;store.set('edt_recs',recs)}catch(e){}}
+setTimeout(()=>recs.filter(r=>!r.posted&&r.dist>=1000&&Date.now()-(+String(r.id).slice(1)||0)<3*864e5).slice(0,3).forEach(postRide),9000);
 /* ---------- segnala un problema (arriva al Gabbah nel Drive, cartella Segnalazioni) ---------- */
 let bugImgData=null;
+$('rideBug').onclick=()=>$('bugOpen').click();
 $('bugOpen').onclick=()=>{$('bugTxt').value='';bugImgData=null;$('bugImgLbl').textContent='Aggiungi uno screenshot (facoltativo)';showSheet('bugSheet');setTimeout(()=>$('bugTxt').focus(),350)};
 $('bugImg').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const im=await createImageBitmap(f),k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);bugImgData=c.toDataURL('image/jpeg',.72);$('bugImgLbl').textContent='Screenshot aggiunto ✓'}catch(x){toast('Immagine non leggibile',2000)}};
 $('bugSend').onclick=async()=>{const txt=$('bugTxt').value.trim();if(txt.length<3&&!bugImgData){toast('Scrivi due parole su cosa non va',2000);return}
@@ -2051,6 +2088,7 @@ $('layerBtn').onclick=()=>{renderBases();fuelInfo();bkInfo();showSheet('mapSheet
 function gdot(c){const d=$('gpsdot');if(d)d.className=c}
 applyTheme();buildStats();
 setTimeout(()=>$('splash').classList.add('out'),1700);$('splash').onclick=()=>$('splash').classList.add('out');
+recStaleCheck();
 gpx.forEach(drawGpx);recalc();recUI();renderLists();startGPS();wake();
 if(rec)toast('Registrazione ripresa: '+rec.name,2600);
 if('serviceWorker' in navigator&&location.protocol==='https:'){

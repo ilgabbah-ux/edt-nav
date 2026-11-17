@@ -119,6 +119,7 @@ function doPost(e) {
     if (b.a === 'tset') out = trackSet(b);
     else if (b.a === 'ride') out = rideAdd(b);
     else if (b.a === 'bug') out = bugAdd(b);
+    else if (b.a === 'use') out = useAdd(b);
     else if (b.key !== EXPORT_KEY) out = { ok: false, error: 'codice' };
     else if (b.a === 'save') out = saveRide(b);
     else if (b.a === 'blist') out = listRides(b);
@@ -185,6 +186,24 @@ function bugAdd(b) {
   dir.createFile(name + '.txt', 'Da: ' + who + ' (gruppo ' + clean(b.g, 20) + ')\n' + stamp + '\n\n' + String(b.txt || '').slice(0, 4000) + '\n\n--- dati del telefono ---\n' + String(b.info || '').slice(0, 20000), 'text/plain');
   var m = String(b.img || '').match(/^data:image\/(jpeg|png);base64,(.+)$/);
   if (m && m[2].length < 2000000) dir.createFile(Utilities.newBlob(Utilities.base64Decode(m[2]), 'image/' + m[1], name + (m[1] === 'png' ? '.png' : '.jpg')));
+  return { ok: true };
+}
+/* ---------- conteggi anonimi d'uso: un file per tutto, giorno per giorno (niente nomi né posizioni) ---------- */
+function useAdd(b) {
+  var u = clean(b.u, 16); if (!u) return { ok: false, error: 'id' };
+  var d = b.d || {}, n = function (k) { var v = Math.round(num(d[k]) || 0); return v > 0 && v < 1000 ? v : 0; };
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var dir = sub(DriveApp.getFolderById(TRACKS_ROOT), 'Giri EDT Nav'), it = dir.getFilesByName('uso-app.json'), f = it.hasNext() ? it.next() : dir.createFile('uso-app.json', '{}', 'application/json');
+    var all = JSON.parse(f.getBlob().getDataAsString() || '{}'), day = Utilities.formatDate(new Date(), 'Europe/Rome', 'yyyy-MM-dd');
+    var x = all[day] || { telefoni: 0, aperture: 0, giri_iniziati: 0, giri_salvati: 0, errori: 0, condividono: 0, versioni: {}, gruppi: {}, _u: [] };
+    if (x._u.indexOf(u) < 0) { x._u.push(u); x.telefoni = x._u.length; if (b.sh) x.condividono++; }
+    x.aperture += n('op'); x.giri_iniziati += n('rs'); x.giri_salvati += n('rv'); x.errori += n('err');
+    var v = clean(b.v, 24); if (v) x.versioni[v] = (x.versioni[v] || 0) + 1;
+    var g = clean(b.g, 20); if (g) x.gruppi[g] = (x.gruppi[g] || 0) + 1;
+    all[day] = x; var keys = Object.keys(all).sort(); while (keys.length > 120) delete all[keys.shift()];
+    f.setContent(JSON.stringify(all, null, 1));
+  } finally { lock.releaseLock(); }
   return { ok: true };
 }
 function statsFile(g) {
