@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">EDT Nav</string>
+    <string name="title_activity_main">EDT Nav</string>
+    <string name="package_name">com.gabbah.edtnav</string>
+    <string name="custom_url_scheme">com.gabbah.edtnav</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">GPS a schermo spento</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_edt</string>
+</resources>

@@ -1,0 +1,15 @@
+{
+  "appId": "com.gabbah.edtnav",
+  "appName": "EDT Nav",
+  "webDir": "www",
+  "server": {
+    "url": "https://ilgabbah-ux.github.io/edt-nav/",
+    "androidScheme": "https",
+    "allowNavigation": ["ilgabbah-ux.github.io"],
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "useLegacyBridge": true,
+    "backgroundColor": "#111111"
+  }
+}
