@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>EDT Nav</title>
 <meta name="theme-color" content="#0d0d0c">
-<link rel="manifest" href="manifest.json?v=2">
+<link rel="manifest" href="manifest.json?v=3">
 <link rel="icon" href="icon-96.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.css">
@@ -285,6 +285,37 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
 .share{width:100%;min-height:56px;margin-top:10px;border-radius:14px;font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;background:var(--green);color:#111}
 .share.on{background:var(--panel2);color:var(--fg);border:2px solid var(--line)}
 .hint{font-size:13px;color:var(--muted);margin:6px 2px 0}
+
+/* ---------- telefono in orizzontale: dati in colonna a sinistra, pulsanti a destra, mappa in mezzo ---------- */
+@media (orientation:landscape) and (max-height:540px){
+  :root{--lsL:118px;--lsR:96px;--lsIL:max(8px,env(safe-area-inset-left,0px));--lsB:calc(env(safe-area-inset-bottom,0px) + 8px)}
+  #hud{right:calc(var(--lsR) + 74px);bottom:0;background:none!important;
+    padding:calc(env(safe-area-inset-top,0px) + 6px) 0 0 calc(var(--lsIL) + var(--lsL) + 8px)}
+  .stats{position:absolute;left:var(--lsIL);top:calc(env(safe-area-inset-top,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);width:var(--lsL);
+    grid-template-columns:1fr;grid-auto-rows:1fr;gap:5px}
+  .stat{display:flex;flex-direction:column;justify-content:center;padding:2px 8px}
+  .stat b{font-size:clamp(18px,calc(38vh / var(--cards,4)),38px)}
+  .stat b.l5{font-size:clamp(16px,calc(32vh / var(--cards,4)),32px)}.stat b.l7{font-size:clamp(14px,calc(26vh / var(--cards,4)),26px)}
+  .stat small{font-size:9px}
+  #navbar{margin-top:0;padding:4px 8px}#navtxt{font-size:20px}#navOff{width:40px;height:40px}
+  #elev{height:38px}
+  #bar{left:auto;top:0;width:var(--lsR);grid-template-columns:1fr;grid-auto-rows:1fr;gap:6px;background:none!important;
+    padding:calc(env(safe-area-inset-top,0px) + 6px) max(8px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 6px) 0}
+  #bar .btn{min-height:0;min-width:0;overflow:hidden;font-size:13px;line-height:1.05;gap:1px;text-align:center}#bar .btn svg{width:22px;height:22px}#bar #recBtn{font-size:15px}
+  .fab{right:calc(var(--lsR) + 8px)}
+  .fab.left{left:calc(var(--lsIL) + var(--lsL) + 8px)}
+  #layerBtn,#shareBtn{bottom:var(--lsB)}
+  #stopBtn,#sosBtn,body.rcon #stopBtn,body.rcon #sosBtn{bottom:calc(var(--lsB) + 60px)}
+  #findBtn,#camBtn{bottom:calc(var(--lsB) + 120px)}
+  #musicBtn{bottom:calc(var(--lsB) + 180px)}
+  #player{left:calc(var(--lsIL) + var(--lsL) + 70px);right:calc(var(--lsR) + 70px);bottom:var(--lsB)}
+  .maplibregl-ctrl-bottom-right{bottom:0;right:calc((var(--lsR) + 66px) * var(--ui,1))}
+  /* scheda del percorso: prende il posto dei dati, a sinistra, e la mappa resta libera */
+  body.rcon .stats{display:none}
+  #routeCard{left:var(--lsIL);right:auto;width:min(320px,42vw);top:calc(env(safe-area-inset-top,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);overflow:auto}
+  body.rcon #hud{padding-left:calc((var(--lsIL) + min(320px,42vw) + 8px) / var(--ui,1))}
+  body.rcon .fab.left{left:calc((var(--lsIL) + min(320px,42vw) + 8px) / var(--ui,1))}
+}
 @media (prefers-reduced-motion:reduce){#splash img,.me .pulse{animation:none}#sheet,#arrow{transition:none}.alert.sos,.rider.sos .no,#sosBtn.active{animation:none}}
 </style>
 </head>
@@ -462,11 +493,12 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <h3>Guida</h3>
   <div class="row"><div class="t">Orientamento</div><div class="seg" id="sOrient"><button data-v="north">Nord su</button><button data-v="heading">Direzione</button></div></div>
   <div class="row"><div class="t">Come seguire le tracce<small>Segui: vedi solo dove sei sulla linea · Naviga: indicazioni di svolta</small></div><div class="seg" id="sTrackMode"><button data-v="segui">Segui</button><button data-v="naviga">Naviga</button></div></div>
-  <div class="row"><div class="t">Voce per le svolte<small>"Tra 200 metri a destra" (in modalità Naviga)</small></div><button class="tog" id="sVoice" aria-label="Voce"></button></div>
+  <div class="row"><div class="t">Voce per le svolte<small>"Tra 200 metri a destra": in modalità Naviga e sempre con "Naviga verso"</small></div><button class="tog" id="sVoice" aria-label="Voce"></button></div>
   <div class="row"><div class="t">Mappa inclinata in movimento<small>Vista 3D come i navigatori quando vai</small></div><button class="tog" id="sTilt" aria-label="Mappa inclinata"></button></div>
   <div class="row"><div class="t">Montagne in 3D<small>Rilievo vero in rilievo (consuma più batteria)</small></div><button class="tog" id="sTerrain" aria-label="Montagne in 3D"></button></div>
-  <div class="row"><div class="t">Zoom automatico<small>Vicino da fermo, più largo quando vai forte</small></div><button class="tog" id="sAutoZoom" aria-label="Zoom automatico"></button></div>
+  <div class="row"><div class="t">Zoom automatico<small>Vicino da fermo, più largo quando vai forte, più vicino agli incroci</small></div><button class="tog" id="sAutoZoom" aria-label="Zoom automatico"></button></div>
   <div class="row"><div class="t">Torna a seguirti dopo<small>Quando sposti la mappa col dito</small></div><div class="seg" id="sResume"><button data-v="0">Mai</button><button data-v="10">10 s</button><button data-v="20">20 s</button><button data-v="40">40 s</button></div></div>
+  <div class="row"><div class="t">Rientro automatico in traccia<small>Fuori traccia ti calcolo la strada vera fino alla traccia, più avanti nel senso di marcia</small></div><button class="tog" id="sRejoin" aria-label="Rientro automatico in traccia"></button></div>
   <div class="row"><div class="t">Allarme fuori traccia</div><div class="seg" id="sOff"><button data-v="30">30 m</button><button data-v="60">60 m</button><button data-v="100">100 m</button><button data-v="200">200 m</button></div></div>
   <h3>Sicurezza</h3>
   <div class="row"><div class="t">Avviso caduta automatico<small>Dopo un colpo forte e un minuto fermo avvisa il gruppo, se non rispondi</small></div><button class="tog" id="sCrash" aria-label="Avviso caduta"></button></div>
@@ -618,7 +650,7 @@ window._errs=[];window._errN=0;addEventListener('error',e=>{window._errN++;_errs
 addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
 function use(k){try{const u=JSON.parse(localStorage.getItem('edt_use')||'{}');u[k]=(u[k]||0)+1;localStorage.setItem('edt_use',JSON.stringify(u))}catch(e){}}
-const APPV='edt-nav-app-v71';
+const APPV='edt-nav-app-v72';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -656,7 +688,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false,elev:true,dayContrast:true,bars:true},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false,elev:true,dayContrast:true,bars:true,rejoin:true},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -698,8 +730,11 @@ map.on('style.load',()=>{
   if(!map.hasImage('trkarrow')){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d');g.strokeStyle='#111';g.lineWidth=7;g.lineCap=g.lineJoin='round';g.beginPath();g.moveTo(10,7);g.lineTo(22,16);g.lineTo(10,25);g.stroke();g.strokeStyle='#fff';g.lineWidth=3.5;g.stroke();map.addImage('trkarrow',g.getImageData(0,0,32,32),{pixelRatio:2})}
   map.addLayer({id:'gpx-arrows',type:'symbol',source:'gpx',filter:['==',['get','act'],true],minzoom:11,layout:{'symbol-placement':'line','symbol-spacing':['interpolate',['linear'],['zoom'],11,70,16,120],'icon-image':'trkarrow','icon-rotation-alignment':'map','icon-allow-overlap':true,'icon-ignore-placement':true,'icon-size':['interpolate',['linear'],['zoom'],11,.9,16,1.3]}});
   map.addLayer({id:'gpx-hit',type:'line',source:'gpx',paint:{'line-color':'#000','line-width':40,'line-opacity':0.01}});
+  map.addSource('rejoin',{type:'geojson',data:EMPTY});
   map.addLayer({id:'rec-case',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-width':S.recWidth+4,'line-opacity':.5}});
   map.addLayer({id:'rec-line',type:'line',source:'rec',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':S.recColor,'line-width':S.recWidth}});
+  map.addLayer({id:'rejoin-case',type:'line',source:'rejoin',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#fff','line-width':10,'line-opacity':.9}});
+  map.addLayer({id:'rejoin',type:'line',source:'rejoin',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ff3b8d','line-width':6}});
   if(!map.hasImage('fuelic'))map.addImage('fuelic',fuelIcon(),{pixelRatio:2});
   if(!map.hasImage('baric'))map.addImage('baric',barIcon(),{pixelRatio:2});
   map.addLayer({id:'bars',type:'symbol',source:'bars',minzoom:11,layout:{visibility:S.bars===false?'none':'visible','icon-image':'baric','icon-size':['interpolate',['linear'],['zoom'],11,.55,15,.95],'icon-allow-overlap':false,'text-field':['step',['zoom'],'',14,['get','name']],'text-font':['Noto Sans Bold'],'text-size':11,'text-offset':[0,1.3],'text-anchor':'top','text-optional':true},paint:{'text-color':'#111','text-halo-color':'#fff','text-halo-width':2}});
@@ -715,7 +750,7 @@ map.on('style.load',()=>{
   if(!map.getSource('dem3d'))map.addSource('dem3d',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14});
   applyTerrain();
   mapReady=true;
-  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails();if(typeof drawBars==='function')drawBars();if(typeof drawFuel==='function')drawFuel();if(typeof drawLead==='function')drawLead()}
+  if(typeof refreshGpx==='function'){refreshGpx();recalc();refreshGrades();if(typeof drawTrails==='function')drawTrails();if(typeof drawBars==='function')drawBars();if(typeof drawFuel==='function')drawFuel();if(typeof drawLead==='function')drawLead();if(typeof rjDraw==='function')rjDraw()}
 });
 function applyTerrain(){try{map.setTerrain(S.terrain&&!S.saver&&map.getSource('dem3d')?{source:'dem3d',exaggeration:1.3}:null)}catch(e){}}
 function setBase(){mapReady=false;map.setStyle(EDTMAP.buildStyle(S),{diff:false})}
@@ -734,8 +769,26 @@ function gradeInfo(){const el=$('gradeInfo');if(!el)return;const st=EDTGRADE.sta
   el.textContent=!S.grades?'Spenti':map.getZoom()<11?'Avvicina la mappa per vederli':st.loading?'Scarico la zona… ('+st.loading+')':st.failed?'Niente rete: riprovo da solo':'Zona salvata sul telefono'}
 let gT=null;EDTGRADE.onChange(()=>{clearTimeout(gT);gT=setTimeout(()=>{if(mapReady&&S.grades){const sig=gradeKeys.slice().sort().join('|')+'#'+EDTGRADE.loaded(gradeKeys);if(sig!==gradeSig){gradeSig=sig;map.getSource('grade')?.setData(EDTGRADE.collect(gradeKeys))}}gradeInfo()},300)});
 function boundsOf(points){const b=new maplibregl.LngLatBounds();points.forEach(p=>b.extend(ll(p)));return b}
-const PAD={top:170,bottom:120,left:30,right:30};
-function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:$('routeCard').classList.contains('on')||cardSoon?{top:150,bottom:330,left:30,right:30}:PAD,maxZoom:max||17,bearing:map.getBearing(),duration:600})}
+const LS=matchMedia('(orientation:landscape) and (max-height:540px)');   // telefono in orizzontale
+const ZPAD={top:0,bottom:0,left:0,right:0};
+// la parte di mappa non coperta da dati e pulsanti: in Segui la freccia sta al centro di questa
+let padC=null,padAt=0,padNow=null;
+function camPad(fresh){
+  if(padC&&!fresh&&Date.now()-padAt<1200)return padC;padAt=Date.now();
+  const c=map.getContainer(),w=c.clientWidth,h=c.clientHeight,bar=$('bar').getBoundingClientRect();let p;
+  if(LS.matches){const rc=$('routeCard').classList.contains('on')?$('routeCard').getBoundingClientRect():$('stats').getBoundingClientRect();p={top:0,bottom:0,left:rc.right,right:w-bar.left}}
+  else{let top=0;['stats','navbar','elev'].forEach(id=>{const r=$(id).getBoundingClientRect();if(r.height)top=Math.max(top,r.bottom)});p={top,bottom:h-bar.top,left:0,right:0}}
+  const cl=(v,m)=>Math.round(Math.max(0,Math.min(m,v||0)));
+  return padC={top:cl(p.top,h*.42),bottom:cl(p.bottom,h*.3),left:cl(p.left,w*.45),right:cl(p.right,w*.3)};
+}
+const padGap=(a,b)=>Math.abs(a.top-b.top)+Math.abs(a.bottom-b.bottom)+Math.abs(a.left-b.left)+Math.abs(a.right-b.right);
+// quando smetti di seguire tolgo il margine senza far saltare la mappa sotto il dito
+function padOff(ms){const c=map.getContainer();padNow=null;map.jumpTo({center:map.unproject([c.clientWidth/2,c.clientHeight/2]),padding:ZPAD});if(ms&&map.getPitch()>0)map.easeTo({pitch:0,duration:ms})}
+function fitPad(){const card=$('routeCard').classList.contains('on')||cardSoon;
+  if(LS.matches){const w=map.getContainer().clientWidth,p=camPad(true);return {top:70,bottom:24,left:(cardSoon&&!$('routeCard').classList.contains('on')?Math.min(320,w*.42)+8:p.left)+72,right:p.right+72}}
+  return card?{top:150,bottom:330,left:30,right:30}:{top:170,bottom:120,left:30,right:30}}
+LS.addEventListener?.('change',()=>{padC=null;setTimeout(()=>{padC=null;map.resize();if(follow&&me)camera(true);else if(typeof elevUpdate==='function')elevUpdate()},350)});
+function fitPts(points,max){if(points.length===1){map.easeTo({center:ll(points[0]),zoom:max||16});return}map.fitBounds(boundsOf(points),{padding:fitPad(),maxZoom:max||17,bearing:map.getBearing(),duration:600})}
 
 /* ---------- GPX ---------- */
 function parseGPX(txt,fallback){
@@ -878,13 +931,13 @@ let resumeT=null,manualZoomAt=0;
 function setFollow(v,dragging){
   if(follow===v&&!v)return;
   follow=v;$('followBtn').classList.toggle('on',v);clearTimeout(resumeT);
-  if(v&&me){userZoomed=false;azBand=null;zoomGoal=null;smoothH=null;if(map.getZoom()<13)map.setZoom(15);camera(true)}
+  if(v&&me){userZoomed=false;azBand=null;zoomGoal=null;jz=null;smoothH=null;if(map.getZoom()<13)map.setZoom(15);camera(true)}
   // mai animare la mappa mentre la stai trascinando: l'animazione "frena" il dito
-  if(!v&&!dragging&&(map.getPitch()>0))map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:500});
+  if(!v&&!dragging)padOff(500);
 }
 $('followBtn').onclick=()=>{startGPS();setFollow(true)};
 map.on('moveend',e=>{if(!e.originalEvent||!follow||!me)return;const pp=map.project(ll(me)),c=map.getCanvas(),w=c.clientWidth,h=c.clientHeight;if(pp.x<w*.15||pp.x>w*.85||pp.y<h*.15||pp.y>h*.85)setFollow(false,true)});
-map.on('dragend',()=>{if(!follow&&map.getPitch()>0)map.easeTo({pitch:0,padding:{top:0,bottom:0,left:0,right:0},duration:400})});
+map.on('dragend',()=>{if(!follow)padOff(400)});
 map.on('dragstart',e=>{if(!e.originalEvent)return;if(e.originalEvent.touches&&e.originalEvent.touches.length>1)return;setFollow(false,true);armResume()});
 // torna a seguirti solo dopo N secondi SENZA toccare la mappa (prima i timer si accumulavano e la mappa saltava indietro mentre la guardavi)
 function armResume(){clearTimeout(resumeT);if(!(S.resume>0&&me))return;resumeT=setTimeout(function chk(){if(follow)return;const idle=Date.now()-userAt;if(touching||idle<S.resume*1000){resumeT=setTimeout(chk,Math.max(1000,S.resume*1000-idle));return}setFollow(true)},S.resume*1000)}
@@ -903,6 +956,14 @@ function coneUpdate(){
 }
 const camBearing=()=>S.orient==='heading'&&follow&&heading!=null?heading:0;
 let userZoomed=false,azBand=null;
+// agli incroci la mappa si avvicina da sola per far vedere bene il bivio, poi torna allo zoom di prima
+let jz=null;
+function junctionZoom(dist){
+  if(!S.autoZoom||!follow){jz=null;return}
+  const near=Math.max(90,Math.min(350,lastKmh/3.6*9));          // circa 9 secondi prima della svolta
+  if(dist!=null&&dist<near){if(jz==null)jz=zoomGoal!=null?zoomGoal:map.getZoom();if(jz<16.9){zoomGoal=17;if(!raf)raf=requestAnimationFrame(frame)}}
+  else if(jz!=null&&(dist==null||dist>near+40)){zoomGoal=jz;jz=null;if(!raf)raf=requestAnimationFrame(frame)}
+}
 function autoZoom(kmh){
   if(!S.autoZoom||!follow||userZoomed||kmh<6)return;
   const band=kmh<30?16:kmh<60?15:14;
@@ -946,12 +1007,14 @@ function frame(now){
   if(follow&&!touching&&Date.now()-userAt>3000&&Date.now()-manualZoomAt>1500&&!map.isZooming()){
     const want=camBearing();
     smoothH=smoothH==null?want:smoothH+((((want-smoothH)%360)+540)%360-180)*kf(.12);   // rotazione morbida
-    const moving=lastKmh>4,tilt=S.tilt&&moving,h=map.getContainer().clientHeight;
+    const moving=lastKmh>4,tilt=S.tilt&&moving;
     const z=map.getZoom(),zg=zoomGoal==null?z:zoomGoal;
+    // freccia sempre al centro della mappa libera (niente più pilota in basso quando la mappa è inclinata)
+    const pg=camPad(),k=kf(.18);padNow=padNow&&padGap(padNow,pg)>1?{top:padNow.top+(pg.top-padNow.top)*k,bottom:padNow.bottom+(pg.bottom-padNow.bottom)*k,left:padNow.left+(pg.left-padNow.left)*k,right:padNow.right+(pg.right-padNow.right)*k}:pg;
     map.jumpTo({center:ll(shownPt),bearing:S.orient==='heading'?smoothH:0,pitch:map.getPitch()+((tilt?55:0)-map.getPitch())*kf(.08),
-      padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},zoom:Math.abs(zg-z)>.01?z+(zg-z)*kf(.06):z});
+      padding:padNow,zoom:Math.abs(zg-z)>.01?z+(zg-z)*kf(.06):z});
   }
-  if(fixV>=1.5||(shownPt&&hav(shownPt,fixPt)>.5)||(follow&&Math.abs(map.getPitch()-((S.tilt&&lastKmh>4)?55:0))>.5))raf=requestAnimationFrame(frame);
+  if(fixV>=1.5||(shownPt&&hav(shownPt,fixPt)>.5)||(follow&&Math.abs(map.getPitch()-((S.tilt&&lastKmh>4)?55:0))>.5)||(follow&&padNow&&padGap(padNow,camPad())>1)||(follow&&zoomGoal!=null&&Math.abs(zoomGoal-map.getZoom())>.02&&!touching))raf=requestAnimationFrame(frame);
 }
 // telecamera: inclinata e con il pilota in basso quando ti muovi, piatta da fermo
 let rideAt=0,lastKmh=0,touching=false,userAt=0,camPos=null,camTilt=null,camHead=null;
@@ -964,8 +1027,8 @@ function camera(now){
   if(!now&&camPos&&hav(camPos,me)<3&&camTilt===tiltNow&&camHead===heading)return;
   camPos=me.slice();camTilt=tiltNow;camHead=heading;
   const moving=lastKmh>4,tilt=S.tilt&&moving;
-  const h=map.getContainer().clientHeight;
-  map.easeTo({center:ll(me),bearing:camBearing(),pitch:tilt?55:0,padding:{top:tilt?h*.38:0,bottom:0,left:0,right:0},
+  padNow=camPad(true);
+  map.easeTo({center:ll(me),bearing:camBearing(),pitch:tilt?55:0,padding:padNow,
     zoom:(autoZoom(lastKmh)||map.getZoom()),duration:now?700:950,easing:x=>x});
 }
 function onPos(p){
@@ -993,7 +1056,7 @@ function onPos(p){
     }
   }
   lastKmh=kmh;if(kmh>10)rideAt=Date.now();
-  if(follow){const z=autoZoom(kmh);if(z)zoomGoal=z;if(!raf)raf=requestAnimationFrame(frame)}
+  if(follow){const z=autoZoom(kmh);if(z){if(jz!=null)jz=z;else zoomGoal=z}if(!raf)raf=requestAnimationFrame(frame)}
   updateNav();renderStats();if(poiList.length)poiCheck();
 }
 
@@ -1036,7 +1099,7 @@ $('navbar').onclick=e=>{
 };
 function updateNav(){
   const t=gpx.find(x=>x.id===active&&x.vis&&x.pts.length>1),nb=$('navbar');if(typeof elevUpdate==='function'&&(!t||elevKey.split(':')[0]!==t.id))setTimeout(elevUpdate,0);
-  if(!t){nb.classList.remove('on','far');return}
+  if(!t){nb.classList.remove('on','far');rjClear();junctionZoom(null);return}
   nb.classList.add('on');
   const total=cumul(t).at(-1);
   if(!me){$('navtxt').innerHTML=esc(km(total))+' <span>'+esc(t.name)+' · attendo il GPS</span>';$('navpct').textContent='';return}
@@ -1044,17 +1107,20 @@ function updateNav(){
   const left=Math.max(0,total-n.along),far=n.d>1500,off=n.d>S.offRoute&&!far;
   st.left=left;
   nb.classList.toggle('off',off);nb.classList.toggle('far',far);
-  if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}if(S.trackMode==='naviga')say('Fuori traccia')}
-  wasOff=off;maybeReroute(off);
-  if(far){const a=t.pts[n.i-1],b=t.pts[n.i],tg=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u],br0=bearing(me,tg);
+  if(off&&!wasOff){try{navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}if(S.trackMode==='naviga'||t.id==='route')say('Fuori traccia')}
+  wasOff=off;maybeReroute(off);maybeRejoin(t,n);
+  if(rjShow(t,n,nb)){junctionZoom(null);return}
+  if(far){junctionZoom(null);const a=t.pts[n.i-1],b=t.pts[n.i],tg=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u],br0=bearing(me,tg);
     $('arrow').style.transform=`rotate(${heading!=null?br0-heading:br0}deg)`;
     $('navtxt').innerHTML='Traccia a '+esc(km(n.d))+' <span>'+esc(t.name)+' · segui la freccia</span>';$('navpct').textContent='';return}
   let target;
   if(off){const a=t.pts[n.i-1],b=t.pts[n.i];target=[a[0]+(b[0]-a[0])*n.u,a[1]+(b[1]-a[1])*n.u]}
   else{let j=n.i;while(j<t.pts.length-1&&cumul(t)[j]-n.along<40)j++;target=t.pts[j]}
   const br=bearing(me,target),rel=heading!=null?br-heading:br;
-  if(!off&&S.trackMode==='naviga'){
-    const turns=buildTurns(t),k=turns.findIndex(x=>x.along>n.along+5),nx=turns[k];
+  // svolte: servono per le indicazioni (Naviga, e sempre sui percorsi calcolati) e per lo zoom agli incroci
+  const turns=off?[]:buildTurns(t),k=turns.findIndex(x=>x.along>n.along+5),nx=turns[k];
+  junctionZoom(nx?nx.along-n.along:null);
+  if(!off&&(S.trackMode==='naviga'||t.id==='route')){
     if(!nx||nx.along-n.along>3000){$('arrow').style.transform='rotate(0deg)';$('navtxt').innerHTML='Dritto '+esc(km(Math.min(left,nx?nx.along-n.along:left)))+' <span>'+esc(km(left))+' all\'arrivo · '+esc(t.name)+'</span>';$('navpct').textContent=''}
     else{const dist=nx.along-n.along,after=turns[k+1];
       $('arrow').style.transform=`rotate(${Math.max(-150,Math.min(150,nx.diff))}deg)`;
@@ -1068,6 +1134,55 @@ function updateNav(){
   $('arrow').style.transform=`rotate(${rel}deg)`;
   $('navtxt').innerHTML=off?'Fuori traccia '+esc(km(n.d))+' <span>Segui la freccia per rientrare</span>':esc(km(left))+' <span>all\'arrivo · '+esc(t.name)+'</span>';
   $('navpct').textContent=off?'':Math.round(n.along/total*100)+'%';
+}
+
+/* ---------- rientro automatico: fuori traccia calcolo la strada vera fino alla traccia ----------
+   Punto di rientro: più avanti di dove hai lasciato la traccia nel senso di marcia, mai indietro.
+   Senza rete (o se il calcolo fallisce) resta la freccia in linea d'aria. */
+let rj=null,rjBusy=false,rjAt=0,rjOffAt=0,rjDevAt=0,rjFail=0;const rjOn={};
+function rjDraw(){if(mapReady)map.getSource('rejoin')?.setData(rj?{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:rj.pts.map(ll)}}:EMPTY)}
+function rjClear(){rjOffAt=0;rjDevAt=0;if(!rj)return;rj=null;rjDraw()}
+function rjTarget(t,n){
+  const c=cumul(t),tot=c[c.length-1],al=Math.min(tot,Math.max(n.along,rjOn[t.id]||0)+Math.max(120,Math.min(600,n.d*1.5)));
+  let j=1;while(j<c.length-1&&c[j]<al)j++;
+  const a=t.pts[j-1],b=t.pts[j],u=c[j]>c[j-1]?(al-c[j-1])/(c[j]-c[j-1]):0;
+  return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];
+}
+async function rjCalc(t,n){
+  if(rjBusy||!navigator.onLine||Date.now()-rjAt<(rj?30000:rjFail?45000:0))return;
+  rjBusy=true;rjAt=Date.now();const first=!rj;
+  try{
+    const r=await EDTROUTE.route(me.slice(),rjTarget(t,n),S.routeMode||'off',[]);
+    if(active!==t.id||!S.rejoin||!me||!r.pts||r.pts.length<2||nearest(t,me).d<=S.offRoute)return;   // nel frattempo sei rientrato o hai cambiato traccia
+    rj={tid:t.id,pts:r.pts};rjDevAt=0;rjFail=0;rjDraw();
+    if(first){toast('↩️ Rientro in traccia: '+km(r.len||cumul(rj).at(-1))+' · segui la linea rosa',3200);if(S.trackMode==='naviga')say('Ti riporto in traccia. Segui la linea')}
+    updateNav();
+  }catch(e){rjFail=1}finally{rjBusy=false}
+}
+function maybeRejoin(t,n){
+  if(!S.rejoin||t.id==='route'||!me){rjClear();return}
+  if(n.d<=S.offRoute){                      // in traccia: ricordo dove sei, così il rientro non ti manda indietro
+    if(rj){toast('✅ Di nuovo in traccia',1800);if(S.trackMode==='naviga')say('Sei di nuovo in traccia')}
+    rjClear();rjOn[t.id]=n.along;return}
+  if(rj&&rj.tid!==t.id)rjClear();
+  if(!rj){
+    if(n.d<Math.max(50,S.offRoute)||n.d>3000){rjOffAt=0;return}
+    if(!rjOffAt)rjOffAt=Date.now();
+    if(Date.now()-rjOffAt>=5000)rjCalc(t,n);   // 5 secondi fuori: non parte per un GPS che balla
+    return}
+  if(n.d>6000){rjClear();return}
+  // ho già la strada del rientro: la rifaccio solo se la lasci
+  const q=nearest(rj,me);rj.q=q;
+  if(q.d>60){if(!rjDevAt)rjDevAt=Date.now();if(Date.now()-rjDevAt>12000)rjCalc(t,n)}else rjDevAt=0;
+}
+function rjShow(t,n,nb){
+  if(!rj||rj.tid!==t.id||!rj.q)return false;
+  const q=rj.q,c=cumul(rj);let j=q.i;while(j<rj.pts.length-1&&c[j]-q.along<40)j++;
+  const br=bearing(me,rj.pts[j]);
+  nb.classList.add('off');nb.classList.remove('far');
+  $('arrow').style.transform=`rotate(${heading!=null?br-heading:br}deg)`;
+  $('navtxt').innerHTML='Rientro tra '+esc(km(Math.max(0,c[c.length-1]-q.along)))+' <span>Fuori traccia '+esc(km(n.d))+' · segui la linea rosa</span>';$('navpct').textContent='';
+  return true;
 }
 
 /* ---------- liste ---------- */
@@ -1925,6 +2040,7 @@ async function calcRoute(silent){
     const r=await EDTROUTE.route(from,dest.pt,S.routeMode,vias);
     gpx=gpx.filter(x=>x.id!=='route');
     const t={id:'route',name:'Verso '+dest.name,pts:r.pts,wpts:[],color:MODE_COLOR[S.routeMode]||'#2fb8ff',width:7,op:100,vis:true,dest,mode:S.routeMode,vias,from,stats:{len:r.len,time:r.time,asc:r.asc,desc:r.desc,dirt:r.dirtPct}};
+    Object.keys(spoken).forEach(k=>{if(k.startsWith('route:'))delete spoken[k]});
     gpx.unshift(t);active='route';saveGpx();drawGpx();renderLists();updateNav();
     if(S.grades)EDTGRADE.along(r.pts);
     const mins=Math.max(1,Math.round(r.time/60)),dur=mins<60?mins+' min':Math.floor(mins/60)+' h '+String(mins%60).padStart(2,'0');
@@ -2046,6 +2162,7 @@ function buildStats(){
 }
 function renderStats(){document.querySelectorAll('#stats b[data-k]').forEach(b=>{const v=String(CARDS[b.dataset.k].v());if(b.innerHTML!==v){b.innerHTML=v;const n=[...b.textContent].length;b.classList.toggle('l5',n>=5&&n<7);b.classList.toggle('l7',n>=7)}})}
 setInterval(renderStats,1000);
+setInterval(()=>{if(follow&&me&&!raf&&padNow&&padGap(padNow,camPad())>1)raf=requestAnimationFrame(frame)},1500);
 
 /* ---------- pannello mappe e impostazioni ---------- */
 function applyTheme(){
@@ -2072,7 +2189,7 @@ $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS(
 tog('sMtb','mtb',buildLayers);tog('sBars','bars',()=>{try{map.setLayoutProperty('bars','visibility',S.bars?'visible':'none')}catch(e){}});tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
 tog('sSaver','saver',applySaver);tog('sDayContrast','dayContrast',applyTheme);tog('sElev','elev',()=>{elevKey='';elevUpdate()});tog('sGloves','gloves',()=>{applyTheme();toast(S.gloves?'🧤 Modalità guanti':'Modalità normale',1500)});tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
-seg('sResume','resume',true);seg('sOff','offRoute',true,updateNav);
+seg('sResume','resume',true);tog('sRejoin','rejoin',()=>{if(!S.rejoin)rjClear();updateNav()});seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
 // riquadri dati
 const cardOpts=Object.entries(CARDS).map(([k,c])=>`<option value="${k}">${k==='none'?'Nessuno':c.l}</option>`).join('');
