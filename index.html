@@ -492,6 +492,7 @@ body.gloves .alert button{min-height:52px;min-width:64px;font-size:17px}
   <div class="row"><div class="t">Nomi e strade sul satellite</div><button class="tog" id="sLabels" aria-label="Nomi sul satellite"></button></div>
   <h3>Guida</h3>
   <div class="row"><div class="t">Orientamento</div><div class="seg" id="sOrient"><button data-v="north">Nord su</button><button data-v="heading">Direzione</button></div></div>
+  <div class="row"><div class="t">Schermo<small>Auto: gira col telefono · Vert. e Orizz.: fisso, anche con la rotazione del telefono spenta</small></div><div class="seg" id="sScreen"><button data-v="auto">Auto</button><button data-v="port">Vert.</button><button data-v="land">Orizz.</button></div></div>
   <div class="row"><div class="t">Come seguire le tracce<small>Segui: vedi solo dove sei sulla linea · Naviga: indicazioni di svolta</small></div><div class="seg" id="sTrackMode"><button data-v="segui">Segui</button><button data-v="naviga">Naviga</button></div></div>
   <div class="row"><div class="t">Voce per le svolte<small>"Tra 200 metri a destra": in modalità Naviga e sempre con "Naviga verso"</small></div><button class="tog" id="sVoice" aria-label="Voce"></button></div>
   <div class="row"><div class="t">Mappa inclinata in movimento<small>Vista 3D come i navigatori quando vai</small></div><button class="tog" id="sTilt" aria-label="Mappa inclinata"></button></div>
@@ -650,7 +651,7 @@ window._errs=[];window._errN=0;addEventListener('error',e=>{window._errN++;_errs
 addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
 function use(k){try{const u=JSON.parse(localStorage.getItem('edt_use')||'{}');u[k]=(u[k]||0)+1;localStorage.setItem('edt_use',JSON.stringify(u))}catch(e){}}
-const APPV='edt-nav-app-v72';
+const APPV='edt-nav-app-v73';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -688,7 +689,7 @@ const COLORS=['#ff3b8d','#e3261b','#ff8a1f','#ffd21f','#3ccf6e','#00b39b','#2fb8
 
 /* ---------- impostazioni ---------- */
 const S=Object.assign({base:'edt',hill:30,mtb:false,labels:true,orient:'north',autoZoom:true,resume:0,offRoute:60,
-  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false,elev:true,dayContrast:true,bars:true,rejoin:true},store.get('edt_set',{}));
+  grades:true,routeMode:'off',trackMode:'segui',voice:true,tilt:true,terrain:false,theme:'dark',contrast:false,ui:1,big:false,cards:['speed','dist','time','alt'],recColor:'#ffd21f',recWidth:6,tank:0,reserve:30,backup:false,keepAwake:null,crash:true,autoNight:true,gloves:false,elev:true,dayContrast:true,bars:true,rejoin:true,screen:'auto'},store.get('edt_set',{}));
 const saveS=()=>store.set('edt_set',S);
 
 /* ---------- mappa (MapLibre, vettoriale) ---------- */
@@ -2189,7 +2190,16 @@ $('sHill').value=S.hill;$('sHill').onchange=()=>{S.hill=+$('sHill').value;saveS(
 tog('sMtb','mtb',buildLayers);tog('sBars','bars',()=>{try{map.setLayoutProperty('bars','visibility',S.bars?'visible':'none')}catch(e){}});tog('sGrades','grades',refreshGrades);tog('sLabels','labels',buildLayers);tog('sBig','big',buildLayers);
 tog('sSaver','saver',applySaver);tog('sDayContrast','dayContrast',applyTheme);tog('sElev','elev',()=>{elevKey='';elevUpdate()});tog('sGloves','gloves',()=>{applyTheme();toast(S.gloves?'🧤 Modalità guanti':'Modalità normale',1500)});tog('sCrash','crash',()=>{if(S.crash)motionStart()});tog('sAutoNight','autoNight',sunTick);seg('sTank','tank',true,()=>{fuelWarned=false;fuelCheck();fuelInfo();setAlerts();renderStats()});seg('sReserve','reserve',true,()=>{fuelCheck();setAlerts()});tog('sBackup','backup',()=>{bkInfo();backupNow(false)});applySaver(true);tog('sAutoZoom','autoZoom');seg('sTrackMode','trackMode',false,()=>{spoken={};updateNav()});tog('sVoice','voice',()=>{if(S.voice)say('Voce attiva')});tog('sTilt','tilt',()=>camera(true));tog('sTerrain','terrain',applyTerrain);tog('sContrast','contrast',applyTheme);
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
-seg('sResume','resume',true);tog('sRejoin','rejoin',()=>{if(!S.rejoin)rjClear();updateNav()});seg('sOff','offRoute',true,updateNav);
+seg('sResume','resume',true);
+// verso dello schermo: lo decide l'app, così l'orizzontale funziona anche nell'app installata da Chrome (nata bloccata in verticale) e con la rotazione del telefono spenta
+function applyScreen(tell){
+  const o=screen.orientation,want=S.screen==='land'?'landscape':S.screen==='port'?'portrait':'any';
+  if(!o||!o.lock){if(tell&&S.screen!=='auto')toast('Qui non posso girare lo schermo: attiva la rotazione automatica del telefono',3500);return}
+  o.lock(want).then(()=>{if(tell)toast(S.screen==='land'?'Schermo orizzontale':S.screen==='port'?'Schermo verticale':'Schermo: gira col telefono',1800)})
+    .catch(()=>{if(tell&&S.screen!=='auto')toast('Qui non posso girare lo schermo da sola: attiva la rotazione automatica del telefono',3500)});
+}
+seg('sScreen','screen',false,()=>applyScreen(true));applyScreen(false);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)applyScreen(false)});tog('sRejoin','rejoin',()=>{if(!S.rejoin)rjClear();updateNav()});seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
 // riquadri dati
 const cardOpts=Object.entries(CARDS).map(([k,c])=>`<option value="${k}">${k==='none'?'Nessuno':c.l}</option>`).join('');
