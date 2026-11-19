@@ -618,7 +618,7 @@ window._errs=[];window._errN=0;addEventListener('error',e=>{window._errN++;_errs
 addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
 function use(k){try{const u=JSON.parse(localStorage.getItem('edt_use')||'{}');u[k]=(u[k]||0)+1;localStorage.setItem('edt_use',JSON.stringify(u))}catch(e){}}
-const APPV='edt-nav-app-v70';
+const APPV='edt-nav-app-v71';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -2099,6 +2099,8 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
     if(rec||(typeof dest!=='undefined'&&dest)){toast('Nuova versione di EDT Nav pronta: chiudi e riapri l\'app quando hai finito di registrare',6000);return}
     location.reload()});
 }
+// stato per l'app Android (APK): le dice se c'è qualcosa da tenere vivo a schermo spento
+window.edtStato=()=>({giro:!!rec,gruppo:!!sharing,naviga:!!dest,traccia:gpx.some(x=>x.id===active&&x.vis&&x.pts.length>1)});
 if(location.hash==='#debug')window._edt={get lastKmh(){return lastKmh},get motionOn(){return motionOn},get impactAt(){return impactAt},closeSheet,setFollow,ping,riders,behindSince,checkAlerts,get me(){return me}};
 })();
 </script>
