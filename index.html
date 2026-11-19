@@ -651,7 +651,7 @@ window._errs=[];window._errN=0;addEventListener('error',e=>{window._errN++;_errs
 addEventListener('unhandledrejection',e=>{_errs.push(new Date().toTimeString().slice(0,8)+' promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));_errs=_errs.slice(-30)});
 (async()=>{
 function use(k){try{const u=JSON.parse(localStorage.getItem('edt_use')||'{}');u[k]=(u[k]||0)+1;localStorage.setItem('edt_use',JSON.stringify(u))}catch(e){}}
-const APPV='edt-nav-app-v73';
+const APPV='edt-nav-app-v74';
 /* ---------- utilità ---------- */
 const $=id=>document.getElementById(id);
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -2192,14 +2192,21 @@ tog('sSaver','saver',applySaver);tog('sDayContrast','dayContrast',applyTheme);to
 seg('sOrient','orient',false,()=>{if(!canRotate&&S.orient==='heading')toast('Rotazione mappa non supportata su questo browser');orient()});
 seg('sResume','resume',true);
 // verso dello schermo: lo decide l'app, così l'orizzontale funziona anche nell'app installata da Chrome (nata bloccata in verticale) e con la rotazione del telefono spenta
-function applyScreen(tell){
-  const o=screen.orientation,want=S.screen==='land'?'landscape':S.screen==='port'?'portrait':'any';
-  if(!o||!o.lock){if(tell&&S.screen!=='auto')toast('Qui non posso girare lo schermo: attiva la rotazione automatica del telefono',3500);return}
-  o.lock(want).then(()=>{if(tell)toast(S.screen==='land'?'Schermo orizzontale':S.screen==='port'?'Schermo verticale':'Schermo: gira col telefono',1800)})
-    .catch(()=>{if(tell&&S.screen!=='auto')toast('Qui non posso girare lo schermo da sola: attiva la rotazione automatica del telefono',3500)});
+let scrOk=false;
+function applyScreen(tell,gesture){
+  const o=screen.orientation,want=S.screen==='land'?'landscape':S.screen==='port'?'portrait':'any',de=document.documentElement;
+  const fail=()=>{if(tell&&S.screen!=='auto')toast(window.Capacitor?'Nell\'APK lo schermo gira con la rotazione automatica del telefono':'Qui non riesco a girare lo schermo: prova dall\'APK',3500)};
+  const ok=()=>{scrOk=true;if(tell)toast(S.screen==='land'?'Schermo orizzontale':S.screen==='port'?'Schermo verticale':'Schermo: gira col telefono',1800)};
+  if(!o||!o.lock){fail();return}
+  if(S.screen==='auto'&&document.fullscreenElement){try{o.unlock()}catch(e){}document.exitFullscreen().catch(()=>{});ok();return}
+  o.lock(want).then(ok).catch(()=>{
+    // l'app installata da Chrome lascia girare lo schermo solo a tutto schermo: ci vado io (serve un tocco, per questo riprovo al primo tocco dopo l'avvio)
+    if(S.screen==='auto'||window.Capacitor||!gesture||!de.requestFullscreen){fail();return}
+    de.requestFullscreen({navigationUI:'hide'}).then(()=>o.lock(want)).then(ok).catch(fail)});
 }
-seg('sScreen','screen',false,()=>applyScreen(true));applyScreen(false);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)applyScreen(false)});tog('sRejoin','rejoin',()=>{if(!S.rejoin)rjClear();updateNav()});seg('sOff','offRoute',true,updateNav);
+seg('sScreen','screen',false,()=>applyScreen(true,true));applyScreen(false);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)applyScreen(false)});
+document.addEventListener('pointerup',()=>{if(S.screen!=='auto'&&!document.fullscreenElement&&!window.Capacitor)applyScreen(false,true)});tog('sRejoin','rejoin',()=>{if(!S.rejoin)rjClear();updateNav()});seg('sOff','offRoute',true,updateNav);
 seg('sTheme','theme',false,applyTheme);seg('sUi','ui',true,applyTheme);
 // riquadri dati
 const cardOpts=Object.entries(CARDS).map(([k,c])=>`<option value="${k}">${k==='none'?'Nessuno':c.l}</option>`).join('');
